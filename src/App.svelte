@@ -4,25 +4,18 @@
 	import { parse } from "./parser";
 
 	const board = Array.from(Array(10), () => new Array(10));
-	class Prog {
-		reset() {
-			board.forEach((row) => row.fill(0));
+
+	addEventListener("DOMContentLoaded", () => {
+		const editor = document.getElementById("editor") as HTMLTextAreaElement;
+
+		function exec() {
+			const [i, j, color] = parse(editor.value);
+			board[i][j] = color;
 		}
 
-		assign(x: number, y: number, value: number) {
-			board[x][y] = value;
-		}
-	}
-	const prog = new Prog();
-	addEventListener("DOMContentLoaded", () => {
-		console.log("DOMContentLoaded");
-		const editor = document.getElementById("editor") as HTMLTextAreaElement;
-		editor.addEventListener("input", () => {
-			console.log(editor.value);
-			parse(editor.value, prog);
-		});
-		editor.value = "board[0][0] = 4";
-		parse(editor.value, prog);
+		editor.addEventListener("input", exec);
+		editor.value = "board[0, 0] = 4";
+		exec();
 	});
 </script>
 
