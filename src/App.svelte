@@ -1,30 +1,37 @@
 <script lang="ts">
-	export let name: string;
+	import Board from "./Board.svelte";
+	import Editor from "./Editor.svelte";
+	import { parse } from "./parser";
+
+	const board = Array.from(Array(10), () => new Array(10));
+	class Prog {
+		reset() {
+			board.forEach((row) => row.fill(0));
+		}
+
+		assign(x: number, y: number, value: number) {
+			board[x][y] = value;
+		}
+	}
+	const prog = new Prog();
+	addEventListener("DOMContentLoaded", () => {
+		console.log("DOMContentLoaded");
+		const editor = document.getElementById("editor") as HTMLTextAreaElement;
+		editor.addEventListener("input", () => {
+			console.log(editor.value);
+			parse(editor.value, prog);
+		});
+	});
 </script>
 
 <main>
-	<h1>Hello {name}!</h1>
-	<p>Visit the <a href="https://svelte.dev/tutorial">Svelte tutorial</a> to learn how to build Svelte apps.</p>
+	<Editor />
+	<Board {board} />
 </main>
 
 <style>
 	main {
-		text-align: center;
-		padding: 1em;
-		max-width: 240px;
-		margin: 0 auto;
-	}
-
-	h1 {
-		color: #ff3e00;
-		text-transform: uppercase;
-		font-size: 4em;
-		font-weight: 100;
-	}
-
-	@media (min-width: 640px) {
-		main {
-			max-width: none;
-		}
+		display: flex;
+		flex-direction: row;
 	}
 </style>
