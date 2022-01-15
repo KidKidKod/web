@@ -1,43 +1,53 @@
-import * as moo from 'moo'
+import type { Token } from 'typescript-parsec';
+import { buildLexer, expectEOF, expectSingleResult, rule } from 'typescript-parsec';
+import { alt, apply, kmid, lrec_sc, seq, str, tok } from 'typescript-parsec';
 
-const lexer = moo.compile({
-    WS: /[ \t]+/,
-    BOARD: 'board',
-    NUM: /0|[1-9][0-9]*/,
-    ASSIGN: '=',
-    LB: '[',
-    RB: ']',
-    COMMENT: /\#[^\n]*/,
-    NL: { match: /\n/, lineBreaks: true },
-})
-
-export interface Program {
-    reset(): void;
-    assign(i: number, j: number, val: number): void;
+enum K {
+    Number,
+    Word,
+    ASSIGN,
+    LB,
+    RB,
+    WS,
 }
 
-export function parse(code: string, prog: Program) {
+const lexer = buildLexer([
+    [true, /^\d+/g, K.Number],
+    [true, /^[a-z]+/g, K.Word],
+    [true, /^=/g, K.ASSIGN],
+    [true, /^\[/g, K.LB],
+    [true, /^\]/g, K.RB],
+    [false, /^\s+/g, K.WS]
+]);
 
-    function assign(tokens: Array<any>, p: number) {
-        const msg = `${tokens}, ${p}`
-        const i = parseInt(tokens[p + 2])
-        const j = parseInt(tokens[p + 5])
-        const v = parseInt(tokens[p + 8])
-        prog.assign(i, j, v)
-    }
+const COLOR = rule<K, [number, number]>();
+const INDEX = rule<K, number>();
 
-    try {
-        prog.reset()
-        lexer.reset(code)
-        const tokens = Array.from(lexer).filter(t => t.type !== 'WS').map(t => t.value);
-        console.log(tokens)
-        for (const [i, token] of tokens.entries()) {
-            if (token === 'board') {
-                assign(tokens, i)
-            }
-        }
-    } catch (e) {
-        console.debug(e)
-    }
+function n(value: Token<K.Number>): number {
+    return +value.text
 }
+
+function setColor(value: [Token<K.Word>, number, Token<K.ASSIGN>, number]): [number, number] {
+    return [value[1], value[3]];
+}
+
+INDEX.setPattern(
+    apply(kmid(tok(K.LB), tok(K.Number), tok(K.RB)), n)
+)
+
+COLOR.setPattern(
+    apply(
+        seq(
+            str('board'),
+            INDEX,
+            tok(K.ASSIGN),
+            apply(tok(K.Number), n)
+        ), setColor)
+)
+
+export function parse(input: string): any {
+    return expectSingleResult(COLOR.parse(lexer.parse(input)))
+}
+
+
 

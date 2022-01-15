@@ -21,6 +21,8 @@
 			console.log(editor.value);
 			parse(editor.value, prog);
 		});
+		editor.value = "board[0][0] = 4";
+		parse(editor.value, prog);
 	});
 </script>
 
