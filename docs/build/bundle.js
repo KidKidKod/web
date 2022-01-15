@@ -1457,15 +1457,17 @@ var app = (function () {
     (function (K) {
         K[K["Number"] = 0] = "Number";
         K[K["Word"] = 1] = "Word";
-        K[K["ASSIGN"] = 2] = "ASSIGN";
-        K[K["LB"] = 3] = "LB";
-        K[K["RB"] = 4] = "RB";
-        K[K["WS"] = 5] = "WS";
+        K[K["Assign"] = 2] = "Assign";
+        K[K["Comma"] = 3] = "Comma";
+        K[K["LB"] = 4] = "LB";
+        K[K["RB"] = 5] = "RB";
+        K[K["WS"] = 6] = "WS";
     })(K || (K = {}));
     const lexer = lib.buildLexer([
         [true, /^\d+/g, K.Number],
         [true, /^[a-z]+/g, K.Word],
-        [true, /^=/g, K.ASSIGN],
+        [true, /^=/g, K.Assign],
+        [true, /^,/g, K.Comma],
         [true, /^\[/g, K.LB],
         [true, /^\]/g, K.RB],
         [false, /^\s+/g, K.WS]
@@ -1475,11 +1477,15 @@ var app = (function () {
     function n(value) {
         return +value.text;
     }
-    function setColor(value) {
+    function index(value) {
         return [value[1], value[3]];
     }
-    INDEX.setPattern(lib.apply(lib.kmid(lib.tok(K.LB), lib.tok(K.Number), lib.tok(K.RB)), n));
-    COLOR.setPattern(lib.apply(lib.seq(lib.str('board'), INDEX, lib.tok(K.ASSIGN), lib.apply(lib.tok(K.Number), n)), setColor));
+    function setColor(value) {
+        const [i, j] = value[1];
+        return [i, j, value[3]];
+    }
+    INDEX.setPattern(lib.apply(lib.seq(lib.tok(K.LB), lib.apply(lib.tok(K.Number), n), lib.tok(K.Comma), lib.apply(lib.tok(K.Number), n), lib.tok(K.RB)), index));
+    COLOR.setPattern(lib.apply(lib.seq(lib.str('board'), INDEX, lib.tok(K.Assign), lib.apply(lib.tok(K.Number), n)), setColor));
     function parse(input) {
         return lib.expectSingleResult(COLOR.parse(lexer.parse(input)));
     }
