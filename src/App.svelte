@@ -1,7 +1,7 @@
 <script lang="ts">
 	import Board from "./Board.svelte";
 	import Editor from "./Editor.svelte";
-	import { parse } from "./parser";
+	import { run } from "./parser";
 
 	const board = Array.from(Array(10), () => new Array(10));
 
@@ -9,7 +9,7 @@
 		const editor = document.getElementById("editor") as HTMLTextAreaElement;
 
 		function exec() {
-			const [i, j, color] = parse(editor.value);
+			const [i, j, color] = run(editor.value);
 			board[i][j] = color;
 		}
 
