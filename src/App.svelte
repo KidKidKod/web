@@ -64,6 +64,14 @@
 		}
 
 		jar.onUpdate(exec);
+		const code = `each row from 0 to 15:
+  each col from 0 to 15:
+    c = (row + col) % 2
+    color(row, col, c)
+  end
+end`;
+		jar.updateCode(code);
+		exec(code);
 	});
 </script>
 

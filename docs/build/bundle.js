@@ -1972,7 +1972,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (65:2) {#each [...Array(16).keys()] as i}
+    // (73:2) {#each [...Array(16).keys()] as i}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*i*/ ctx[1] + "";
@@ -1986,7 +1986,7 @@ var app = (function () {
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[1]);
     			attr_dev(div, "class", "svelte-1ufx59h");
-    			add_location(div, file, 65, 3, 1871);
+    			add_location(div, file, 73, 3, 2038);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -2003,7 +2003,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(65:2) {#each [...Array(16).keys()] as i}",
+    		source: "(73:2) {#each [...Array(16).keys()] as i}",
     		ctx
     	});
 
@@ -2049,13 +2049,13 @@ var app = (function () {
 
     			attr_dev(div0, "id", "editor");
     			attr_dev(div0, "class", "svelte-1ufx59h");
-    			add_location(div0, file, 60, 2, 1761);
+    			add_location(div0, file, 68, 2, 1928);
     			attr_dev(div1, "class", "edit svelte-1ufx59h");
-    			add_location(div1, file, 59, 1, 1740);
+    			add_location(div1, file, 67, 1, 1907);
     			attr_dev(div2, "class", "colors svelte-1ufx59h");
-    			add_location(div2, file, 63, 1, 1810);
+    			add_location(div2, file, 71, 1, 1977);
     			attr_dev(main, "class", "svelte-1ufx59h");
-    			add_location(main, file, 58, 0, 1732);
+    			add_location(main, file, 66, 0, 1899);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2189,6 +2189,16 @@ var app = (function () {
     		}
 
     		jar.onUpdate(exec);
+
+    		const code = `each row from 0 to 15:
+  each col from 0 to 15:
+    c = (row + col) % 2
+    color(row, col, c)
+  end
+end`;
+
+    		jar.updateCode(code);
+    		exec(code);
     	});
 
     	const writable_props = [];
