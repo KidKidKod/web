@@ -13,11 +13,6 @@
 </div>
 
 <style>
-    .board {
-        height: 100%;
-        width: 100%;
-    }
-
     .row {
         display: flex;
         flex-direction: row;
@@ -29,8 +24,8 @@
     }
 
     .cell {
-        width: 2em;
-        height: 2em;
+        width: 1.5em;
+        height: 1.5em;
         border: 1px solid gray;
         margin-left: 0.2em;
     }

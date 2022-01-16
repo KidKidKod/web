@@ -9,14 +9,14 @@ var app = (function () {
             loc: { file, line, column, char }
         };
     }
-    function run$1(fn) {
+    function run(fn) {
         return fn();
     }
     function blank_object() {
         return Object.create(null);
     }
     function run_all(fns) {
-        fns.forEach(run$1);
+        fns.forEach(run);
     }
     function is_function(thing) {
         return typeof thing === 'function';
@@ -191,7 +191,7 @@ var app = (function () {
         if (!customElement) {
             // onMount happens before the initial afterUpdate
             add_render_callback(() => {
-                const new_on_destroy = on_mount.map(run$1).filter(is_function);
+                const new_on_destroy = on_mount.map(run).filter(is_function);
                 if (on_destroy) {
                     on_destroy.push(...new_on_destroy);
                 }
@@ -369,11 +369,458 @@ var app = (function () {
         $inject_state() { }
     }
 
+    const globalWindow = window;
+    function CodeJar(editor, highlight, opt = {}) {
+        const options = Object.assign({ tab: '\t', indentOn: /{$/, spellcheck: false, catchTab: true, preserveIdent: true, addClosing: true, history: true, window: globalWindow }, opt);
+        const window = options.window;
+        const document = window.document;
+        let listeners = [];
+        let history = [];
+        let at = -1;
+        let focus = false;
+        let callback;
+        let prev; // code content prior keydown event
+        editor.setAttribute('contenteditable', 'plaintext-only');
+        editor.setAttribute('spellcheck', options.spellcheck ? 'true' : 'false');
+        editor.style.outline = 'none';
+        editor.style.overflowWrap = 'break-word';
+        editor.style.overflowY = 'auto';
+        editor.style.whiteSpace = 'pre-wrap';
+        let isLegacy = false; // true if plaintext-only is not supported
+        highlight(editor);
+        if (editor.contentEditable !== 'plaintext-only')
+            isLegacy = true;
+        if (isLegacy)
+            editor.setAttribute('contenteditable', 'true');
+        const debounceHighlight = debounce(() => {
+            const pos = save();
+            highlight(editor, pos);
+            restore(pos);
+        }, 30);
+        let recording = false;
+        const shouldRecord = (event) => {
+            return !isUndo(event) && !isRedo(event)
+                && event.key !== 'Meta'
+                && event.key !== 'Control'
+                && event.key !== 'Alt'
+                && !event.key.startsWith('Arrow');
+        };
+        const debounceRecordHistory = debounce((event) => {
+            if (shouldRecord(event)) {
+                recordHistory();
+                recording = false;
+            }
+        }, 300);
+        const on = (type, fn) => {
+            listeners.push([type, fn]);
+            editor.addEventListener(type, fn);
+        };
+        on('keydown', event => {
+            if (event.defaultPrevented)
+                return;
+            prev = toString();
+            if (options.preserveIdent)
+                handleNewLine(event);
+            else
+                legacyNewLineFix(event);
+            if (options.catchTab)
+                handleTabCharacters(event);
+            if (options.addClosing)
+                handleSelfClosingCharacters(event);
+            if (options.history) {
+                handleUndoRedo(event);
+                if (shouldRecord(event) && !recording) {
+                    recordHistory();
+                    recording = true;
+                }
+            }
+            if (isLegacy)
+                restore(save());
+        });
+        on('keyup', event => {
+            if (event.defaultPrevented)
+                return;
+            if (event.isComposing)
+                return;
+            if (prev !== toString())
+                debounceHighlight();
+            debounceRecordHistory(event);
+            if (callback)
+                callback(toString());
+        });
+        on('focus', _event => {
+            focus = true;
+        });
+        on('blur', _event => {
+            focus = false;
+        });
+        on('paste', event => {
+            recordHistory();
+            handlePaste(event);
+            recordHistory();
+            if (callback)
+                callback(toString());
+        });
+        function save() {
+            const s = getSelection();
+            const pos = { start: 0, end: 0, dir: undefined };
+            let { anchorNode, anchorOffset, focusNode, focusOffset } = s;
+            if (!anchorNode || !focusNode)
+                throw 'error1';
+            // Selection anchor and focus are expected to be text nodes,
+            // so normalize them.
+            if (anchorNode.nodeType === Node.ELEMENT_NODE) {
+                const node = document.createTextNode('');
+                anchorNode.insertBefore(node, anchorNode.childNodes[anchorOffset]);
+                anchorNode = node;
+                anchorOffset = 0;
+            }
+            if (focusNode.nodeType === Node.ELEMENT_NODE) {
+                const node = document.createTextNode('');
+                focusNode.insertBefore(node, focusNode.childNodes[focusOffset]);
+                focusNode = node;
+                focusOffset = 0;
+            }
+            visit(editor, el => {
+                if (el === anchorNode && el === focusNode) {
+                    pos.start += anchorOffset;
+                    pos.end += focusOffset;
+                    pos.dir = anchorOffset <= focusOffset ? '->' : '<-';
+                    return 'stop';
+                }
+                if (el === anchorNode) {
+                    pos.start += anchorOffset;
+                    if (!pos.dir) {
+                        pos.dir = '->';
+                    }
+                    else {
+                        return 'stop';
+                    }
+                }
+                else if (el === focusNode) {
+                    pos.end += focusOffset;
+                    if (!pos.dir) {
+                        pos.dir = '<-';
+                    }
+                    else {
+                        return 'stop';
+                    }
+                }
+                if (el.nodeType === Node.TEXT_NODE) {
+                    if (pos.dir != '->')
+                        pos.start += el.nodeValue.length;
+                    if (pos.dir != '<-')
+                        pos.end += el.nodeValue.length;
+                }
+            });
+            // collapse empty text nodes
+            editor.normalize();
+            return pos;
+        }
+        function restore(pos) {
+            const s = getSelection();
+            let startNode, startOffset = 0;
+            let endNode, endOffset = 0;
+            if (!pos.dir)
+                pos.dir = '->';
+            if (pos.start < 0)
+                pos.start = 0;
+            if (pos.end < 0)
+                pos.end = 0;
+            // Flip start and end if the direction reversed
+            if (pos.dir == '<-') {
+                const { start, end } = pos;
+                pos.start = end;
+                pos.end = start;
+            }
+            let current = 0;
+            visit(editor, el => {
+                if (el.nodeType !== Node.TEXT_NODE)
+                    return;
+                const len = (el.nodeValue || '').length;
+                if (current + len > pos.start) {
+                    if (!startNode) {
+                        startNode = el;
+                        startOffset = pos.start - current;
+                    }
+                    if (current + len > pos.end) {
+                        endNode = el;
+                        endOffset = pos.end - current;
+                        return 'stop';
+                    }
+                }
+                current += len;
+            });
+            if (!startNode)
+                startNode = editor, startOffset = editor.childNodes.length;
+            if (!endNode)
+                endNode = editor, endOffset = editor.childNodes.length;
+            // Flip back the selection
+            if (pos.dir == '<-') {
+                [startNode, startOffset, endNode, endOffset] = [endNode, endOffset, startNode, startOffset];
+            }
+            s.setBaseAndExtent(startNode, startOffset, endNode, endOffset);
+        }
+        function beforeCursor() {
+            const s = getSelection();
+            const r0 = s.getRangeAt(0);
+            const r = document.createRange();
+            r.selectNodeContents(editor);
+            r.setEnd(r0.startContainer, r0.startOffset);
+            return r.toString();
+        }
+        function afterCursor() {
+            const s = getSelection();
+            const r0 = s.getRangeAt(0);
+            const r = document.createRange();
+            r.selectNodeContents(editor);
+            r.setStart(r0.endContainer, r0.endOffset);
+            return r.toString();
+        }
+        function handleNewLine(event) {
+            if (event.key === 'Enter') {
+                const before = beforeCursor();
+                const after = afterCursor();
+                let [padding] = findPadding(before);
+                let newLinePadding = padding;
+                // If last symbol is "{" ident new line
+                // Allow user defines indent rule
+                if (options.indentOn.test(before)) {
+                    newLinePadding += options.tab;
+                }
+                // Preserve padding
+                if (newLinePadding.length > 0) {
+                    preventDefault(event);
+                    event.stopPropagation();
+                    insert('\n' + newLinePadding);
+                }
+                else {
+                    legacyNewLineFix(event);
+                }
+                // Place adjacent "}" on next line
+                if (newLinePadding !== padding && after[0] === '}') {
+                    const pos = save();
+                    insert('\n' + padding);
+                    restore(pos);
+                }
+            }
+        }
+        function legacyNewLineFix(event) {
+            // Firefox does not support plaintext-only mode
+            // and puts <div><br></div> on Enter. Let's help.
+            if (isLegacy && event.key === 'Enter') {
+                preventDefault(event);
+                event.stopPropagation();
+                if (afterCursor() == '') {
+                    insert('\n ');
+                    const pos = save();
+                    pos.start = --pos.end;
+                    restore(pos);
+                }
+                else {
+                    insert('\n');
+                }
+            }
+        }
+        function handleSelfClosingCharacters(event) {
+            const open = `([{'"`;
+            const close = `)]}'"`;
+            const codeAfter = afterCursor();
+            const codeBefore = beforeCursor();
+            const escapeCharacter = codeBefore.substr(codeBefore.length - 1) === '\\';
+            const charAfter = codeAfter.substr(0, 1);
+            if (close.includes(event.key) && !escapeCharacter && charAfter === event.key) {
+                // We already have closing char next to cursor.
+                // Move one char to right.
+                const pos = save();
+                preventDefault(event);
+                pos.start = ++pos.end;
+                restore(pos);
+            }
+            else if (open.includes(event.key)
+                && !escapeCharacter
+                && (`"'`.includes(event.key) || ['', ' ', '\n'].includes(charAfter))) {
+                preventDefault(event);
+                const pos = save();
+                const wrapText = pos.start == pos.end ? '' : getSelection().toString();
+                const text = event.key + wrapText + close[open.indexOf(event.key)];
+                insert(text);
+                pos.start++;
+                pos.end++;
+                restore(pos);
+            }
+        }
+        function handleTabCharacters(event) {
+            if (event.key === 'Tab') {
+                preventDefault(event);
+                if (event.shiftKey) {
+                    const before = beforeCursor();
+                    let [padding, start,] = findPadding(before);
+                    if (padding.length > 0) {
+                        const pos = save();
+                        // Remove full length tab or just remaining padding
+                        const len = Math.min(options.tab.length, padding.length);
+                        restore({ start, end: start + len });
+                        document.execCommand('delete');
+                        pos.start -= len;
+                        pos.end -= len;
+                        restore(pos);
+                    }
+                }
+                else {
+                    insert(options.tab);
+                }
+            }
+        }
+        function handleUndoRedo(event) {
+            if (isUndo(event)) {
+                preventDefault(event);
+                at--;
+                const record = history[at];
+                if (record) {
+                    editor.innerHTML = record.html;
+                    restore(record.pos);
+                }
+                if (at < 0)
+                    at = 0;
+            }
+            if (isRedo(event)) {
+                preventDefault(event);
+                at++;
+                const record = history[at];
+                if (record) {
+                    editor.innerHTML = record.html;
+                    restore(record.pos);
+                }
+                if (at >= history.length)
+                    at--;
+            }
+        }
+        function recordHistory() {
+            if (!focus)
+                return;
+            const html = editor.innerHTML;
+            const pos = save();
+            const lastRecord = history[at];
+            if (lastRecord) {
+                if (lastRecord.html === html
+                    && lastRecord.pos.start === pos.start
+                    && lastRecord.pos.end === pos.end)
+                    return;
+            }
+            at++;
+            history[at] = { html, pos };
+            history.splice(at + 1);
+            const maxHistory = 300;
+            if (at > maxHistory) {
+                at = maxHistory;
+                history.splice(0, 1);
+            }
+        }
+        function handlePaste(event) {
+            preventDefault(event);
+            const text = (event.originalEvent || event)
+                .clipboardData
+                .getData('text/plain')
+                .replace(/\r/g, '');
+            const pos = save();
+            insert(text);
+            highlight(editor);
+            restore({ start: pos.start + text.length, end: pos.start + text.length });
+        }
+        function visit(editor, visitor) {
+            const queue = [];
+            if (editor.firstChild)
+                queue.push(editor.firstChild);
+            let el = queue.pop();
+            while (el) {
+                if (visitor(el) === 'stop')
+                    break;
+                if (el.nextSibling)
+                    queue.push(el.nextSibling);
+                if (el.firstChild)
+                    queue.push(el.firstChild);
+                el = queue.pop();
+            }
+        }
+        function isCtrl(event) {
+            return event.metaKey || event.ctrlKey;
+        }
+        function isUndo(event) {
+            return isCtrl(event) && !event.shiftKey && event.code === 'KeyZ';
+        }
+        function isRedo(event) {
+            return isCtrl(event) && event.shiftKey && event.code === 'KeyZ';
+        }
+        function insert(text) {
+            text = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+            document.execCommand('insertHTML', false, text);
+        }
+        function debounce(cb, wait) {
+            let timeout = 0;
+            return (...args) => {
+                clearTimeout(timeout);
+                timeout = window.setTimeout(() => cb(...args), wait);
+            };
+        }
+        function findPadding(text) {
+            // Find beginning of previous line.
+            let i = text.length - 1;
+            while (i >= 0 && text[i] !== '\n')
+                i--;
+            i++;
+            // Find padding of the line.
+            let j = i;
+            while (j < text.length && /[ \t]/.test(text[j]))
+                j++;
+            return [text.substring(i, j) || '', i, j];
+        }
+        function toString() {
+            return editor.textContent || '';
+        }
+        function preventDefault(event) {
+            event.preventDefault();
+        }
+        function getSelection() {
+            var _a;
+            if (((_a = editor.parentNode) === null || _a === void 0 ? void 0 : _a.nodeType) == Node.DOCUMENT_FRAGMENT_NODE) {
+                return editor.parentNode.getSelection();
+            }
+            return window.getSelection();
+        }
+        return {
+            updateOptions(newOptions) {
+                Object.assign(options, newOptions);
+            },
+            updateCode(code) {
+                editor.textContent = code;
+                highlight(editor);
+            },
+            onUpdate(cb) {
+                callback = cb;
+            },
+            toString,
+            save,
+            restore,
+            recordHistory,
+            destroy() {
+                for (let [type, fn] of listeners) {
+                    editor.removeEventListener(type, fn);
+                }
+            },
+        };
+    }
+
     /* src/Board.svelte generated by Svelte v3.46.2 */
 
-    const file$2 = "src/Board.svelte";
+    const file$1 = "src/Board.svelte";
 
-    function get_each_context(ctx, list, i) {
+    function get_each_context$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[1] = list[i];
     	return child_ctx;
@@ -393,9 +840,9 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			div = element("div");
-    			attr_dev(div, "class", "cell svelte-zwtynr");
+    			attr_dev(div, "class", "cell svelte-1agfauy");
     			attr_dev(div, "data-color", div_data_color_value = /*color*/ ctx[4]);
-    			add_location(div, file$2, 8, 16, 190);
+    			add_location(div, file$1, 8, 16, 190);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -422,7 +869,7 @@ var app = (function () {
     }
 
     // (6:4) {#each board as row}
-    function create_each_block(ctx) {
+    function create_each_block$1(ctx) {
     	let div;
     	let t;
     	let each_value_1 = /*row*/ ctx[1];
@@ -442,8 +889,8 @@ var app = (function () {
     			}
 
     			t = space();
-    			attr_dev(div, "class", "row svelte-zwtynr");
-    			add_location(div, file$2, 6, 8, 123);
+    			attr_dev(div, "class", "row svelte-1agfauy");
+    			add_location(div, file$1, 6, 8, 123);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -487,7 +934,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block.name,
+    		id: create_each_block$1.name,
     		type: "each",
     		source: "(6:4) {#each board as row}",
     		ctx
@@ -496,14 +943,14 @@ var app = (function () {
     	return block;
     }
 
-    function create_fragment$2(ctx) {
+    function create_fragment$1(ctx) {
     	let div;
     	let each_value = /*board*/ ctx[0];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
-    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    		each_blocks[i] = create_each_block$1(get_each_context$1(ctx, each_value, i));
     	}
 
     	const block = {
@@ -514,8 +961,8 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			attr_dev(div, "class", "board svelte-zwtynr");
-    			add_location(div, file$2, 4, 0, 70);
+    			attr_dev(div, "class", "board");
+    			add_location(div, file$1, 4, 0, 70);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -534,12 +981,12 @@ var app = (function () {
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
-    					const child_ctx = get_each_context(ctx, each_value, i);
+    					const child_ctx = get_each_context$1(ctx, each_value, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     					} else {
-    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i] = create_each_block$1(child_ctx);
     						each_blocks[i].c();
     						each_blocks[i].m(div, null);
     					}
@@ -562,7 +1009,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$2.name,
+    		id: create_fragment$1.name,
     		type: "component",
     		source: "",
     		ctx
@@ -571,7 +1018,7 @@ var app = (function () {
     	return block;
     }
 
-    function instance$2($$self, $$props, $$invalidate) {
+    function instance$1($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('Board', slots, []);
     	let { board = Array(10).fill(Array(10)) } = $$props;
@@ -601,13 +1048,13 @@ var app = (function () {
     class Board extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$2, create_fragment$2, safe_not_equal, { board: 0 });
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { board: 0 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Board",
     			options,
-    			id: create_fragment$2.name
+    			id: create_fragment$1.name
     		});
     	}
 
@@ -617,76 +1064,6 @@ var app = (function () {
 
     	set board(value) {
     		throw new Error("<Board>: Props cannot be set directly on the component instance unless compiling with 'accessors: true' or '<svelte:options accessors/>'");
-    	}
-    }
-
-    /* src/Editor.svelte generated by Svelte v3.46.2 */
-
-    const file$1 = "src/Editor.svelte";
-
-    function create_fragment$1(ctx) {
-    	let div;
-    	let textarea;
-
-    	const block = {
-    		c: function create() {
-    			div = element("div");
-    			textarea = element("textarea");
-    			attr_dev(textarea, "id", "editor");
-    			attr_dev(textarea, "class", "svelte-1j77od");
-    			add_location(textarea, file$1, 4, 4, 45);
-    			attr_dev(div, "class", "editor");
-    			add_location(div, file$1, 3, 0, 20);
-    		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, textarea);
-    		},
-    		p: noop,
-    		i: noop,
-    		o: noop,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
-    		}
-    	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment$1.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
-    }
-
-    function instance$1($$self, $$props) {
-    	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots('Editor', slots, []);
-    	const writable_props = [];
-
-    	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Editor> was created with unknown prop '${key}'`);
-    	});
-
-    	return [];
-    }
-
-    class Editor extends SvelteComponentDev {
-    	constructor(options) {
-    		super(options);
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, {});
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "Editor",
-    			options,
-    			id: create_fragment$1.name
-    		});
     	}
     }
 
@@ -1455,27 +1832,34 @@ var app = (function () {
 
     var K;
     (function (K) {
-        K[K["Number"] = 0] = "Number";
-        K[K["Name"] = 1] = "Name";
+        K[K["KW"] = 0] = "KW";
+        K[K["Number"] = 1] = "Number";
         K[K["Op1"] = 2] = "Op1";
         K[K["Op2"] = 3] = "Op2";
         K[K["Assign"] = 4] = "Assign";
         K[K["Comma"] = 5] = "Comma";
-        K[K["LP"] = 6] = "LP";
-        K[K["RP"] = 7] = "RP";
-        K[K["WS"] = 8] = "WS";
+        K[K["Col"] = 6] = "Col";
+        K[K["LP"] = 7] = "LP";
+        K[K["RP"] = 8] = "RP";
+        K[K["WS"] = 9] = "WS";
+        K[K["Name"] = 10] = "Name";
     })(K || (K = {}));
-    const lexer = lib.buildLexer([
-        [true, /^\d+/g, K.Number],
-        [true, /^[a-z]+/g, K.Name],
-        [true, /^=/g, K.Assign],
-        [true, /^[*/%]/g, K.Op1],
-        [true, /^[-+]/g, K.Op2],
-        [true, /^,/g, K.Comma],
-        [true, /^\(/g, K.LP],
-        [true, /^\)/g, K.RP],
-        [false, /^\s+/g, K.WS]
-    ]);
+    function getLexer(keepWs = false) {
+        return lib.buildLexer([
+            [keepWs, /^\s+/g, K.WS],
+            [true, /^(if|each|from|to|end)/g, K.KW],
+            [true, /^\d+/g, K.Number],
+            [true, /^=/g, K.Assign],
+            [true, /^[*/%]/g, K.Op1],
+            [true, /^[-+]/g, K.Op2],
+            [true, /^,/g, K.Comma],
+            [true, /^:/g, K.Col],
+            [true, /^\(/g, K.LP],
+            [true, /^\)/g, K.RP],
+            [true, /^[a-z_]+/g, K.Name],
+        ]);
+    }
+    const lexer = getLexer();
     const ops = {
         '-': (a, b) => a - b,
         '+': (a, b) => a + b,
@@ -1483,7 +1867,7 @@ var app = (function () {
         '/': (a, b) => a / b,
         '%': (a, b) => a % b,
     };
-    function run(input, host = { vars: {}, funcs: {} }) {
+    function parse(input, host = { vars: {}, funcs: {} }) {
         function n(num) {
             return +num.text;
         }
@@ -1518,15 +1902,6 @@ var app = (function () {
                 }
             };
         }
-        function expAssign(value) {
-            const [name, _, exp] = value;
-            const val = exp.eval();
-            return {
-                eval: () => {
-                    return host.vars[name.text] = val;
-                }
-            };
-        }
         function args(args, arg) {
             args.push(arg[1]);
             return args;
@@ -1536,6 +1911,9 @@ var app = (function () {
         const FACTOR = lib.rule();
         const EXP = lib.rule();
         const FUNC_CALL = lib.rule();
+        const ASSIGN = lib.rule();
+        const EACH = lib.rule();
+        const IF = lib.rule();
         const STMT = lib.rule();
         const PROG = lib.rule();
         ARGS.setPattern(lib.alt(lib.apply(lib.seq(lib.tok(K.LP), lib.tok(K.RP)), () => []), lib.kmid(lib.tok(K.LP), lib.lrec_sc(lib.apply(TERM, e => [e]), lib.seq(lib.tok(K.Comma), TERM), args), lib.tok(K.RP))));
@@ -1543,7 +1921,42 @@ var app = (function () {
         FACTOR.setPattern(lib.lrec_sc(TERM, lib.seq(lib.tok(K.Op1), TERM), expOp));
         EXP.setPattern(lib.alt(lib.lrec_sc(FACTOR, lib.seq(lib.tok(K.Op2), FACTOR), expOp), FUNC_CALL));
         FUNC_CALL.setPattern(lib.apply(lib.seq(lib.tok(K.Name), ARGS), expFuncCall));
-        STMT.setPattern(lib.alt(lib.apply(lib.seq(lib.tok(K.Name), lib.tok(K.Assign), EXP), expAssign), FUNC_CALL));
+        function expEach(value) {
+            const [$1, name, $2, fromExp, $3, toExp, $4, prog, $5] = value;
+            return {
+                eval: () => {
+                    for (let i = fromExp.eval(); i <= toExp.eval(); i++) {
+                        host.vars[name.text] = i;
+                        prog.forEach(s => s.eval());
+                    }
+                    return 0;
+                }
+            };
+        }
+        EACH.setPattern(lib.apply(lib.seq(lib.str('each'), lib.tok(K.Name), lib.str('from'), EXP, lib.str('to'), EXP, lib.tok(K.Col), PROG, lib.str('end')), expEach));
+        function expIf(value) {
+            const [$1, cond, $2, prog, $3] = value;
+            return {
+                eval: () => {
+                    const v = cond.eval();
+                    if (v) {
+                        prog.forEach(s => s.eval());
+                    }
+                    return v;
+                }
+            };
+        }
+        IF.setPattern(lib.apply(lib.seq(lib.str('if'), EXP, lib.tok(K.Col), PROG, lib.str('end')), expIf));
+        function expAssign(value) {
+            const [name, _, exp] = value;
+            return {
+                eval: () => {
+                    return host.vars[name.text] = exp.eval();
+                }
+            };
+        }
+        ASSIGN.setPattern(lib.apply(lib.seq(lib.tok(K.Name), lib.tok(K.Assign), EXP), expAssign));
+        STMT.setPattern(lib.alt(ASSIGN, FUNC_CALL, EACH, IF));
         PROG.setPattern(lib.rep_sc(STMT));
         return lib.expectSingleResult(lib.expectEOF(PROG.parse(lexer.parse(input))));
     }
@@ -1553,58 +1966,157 @@ var app = (function () {
     const { console: console_1 } = globals;
     const file = "src/App.svelte";
 
+    function get_each_context(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[1] = list[i];
+    	return child_ctx;
+    }
+
+    // (65:2) {#each [...Array(16).keys()] as i}
+    function create_each_block(ctx) {
+    	let div;
+    	let t0_value = /*i*/ ctx[1] + "";
+    	let t0;
+    	let t1;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			t0 = text(t0_value);
+    			t1 = space();
+    			attr_dev(div, "data-color", /*i*/ ctx[1]);
+    			attr_dev(div, "class", "svelte-1ufx59h");
+    			add_location(div, file, 65, 3, 1871);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, t0);
+    			append_dev(div, t1);
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block.name,
+    		type: "each",
+    		source: "(65:2) {#each [...Array(16).keys()] as i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
     function create_fragment(ctx) {
     	let main;
-    	let editor;
-    	let t;
+    	let div1;
+    	let div0;
+    	let t0;
     	let board_1;
+    	let t1;
+    	let div2;
     	let current;
-    	editor = new Editor({ $$inline: true });
 
     	board_1 = new Board({
     			props: { board: /*board*/ ctx[0] },
     			$$inline: true
     		});
 
+    	let each_value = [...Array(16).keys()];
+    	validate_each_argument(each_value);
+    	let each_blocks = [];
+
+    	for (let i = 0; i < each_value.length; i += 1) {
+    		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
+    	}
+
     	const block = {
     		c: function create() {
     			main = element("main");
-    			create_component(editor.$$.fragment);
-    			t = space();
+    			div1 = element("div");
+    			div0 = element("div");
+    			t0 = space();
     			create_component(board_1.$$.fragment);
-    			attr_dev(main, "class", "svelte-dl7xui");
-    			add_location(main, file, 34, 0, 995);
+    			t1 = space();
+    			div2 = element("div");
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].c();
+    			}
+
+    			attr_dev(div0, "id", "editor");
+    			attr_dev(div0, "class", "svelte-1ufx59h");
+    			add_location(div0, file, 60, 2, 1761);
+    			attr_dev(div1, "class", "edit svelte-1ufx59h");
+    			add_location(div1, file, 59, 1, 1740);
+    			attr_dev(div2, "class", "colors svelte-1ufx59h");
+    			add_location(div2, file, 63, 1, 1810);
+    			attr_dev(main, "class", "svelte-1ufx59h");
+    			add_location(main, file, 58, 0, 1732);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, main, anchor);
-    			mount_component(editor, main, null);
-    			append_dev(main, t);
-    			mount_component(board_1, main, null);
+    			append_dev(main, div1);
+    			append_dev(div1, div0);
+    			append_dev(div1, t0);
+    			mount_component(board_1, div1, null);
+    			append_dev(main, t1);
+    			append_dev(main, div2);
+
+    			for (let i = 0; i < each_blocks.length; i += 1) {
+    				each_blocks[i].m(div2, null);
+    			}
+
     			current = true;
     		},
     		p: function update(ctx, [dirty]) {
     			const board_1_changes = {};
     			if (dirty & /*board*/ 1) board_1_changes.board = /*board*/ ctx[0];
     			board_1.$set(board_1_changes);
+
+    			if (dirty & /*Array*/ 0) {
+    				each_value = [...Array(16).keys()];
+    				validate_each_argument(each_value);
+    				let i;
+
+    				for (i = 0; i < each_value.length; i += 1) {
+    					const child_ctx = get_each_context(ctx, each_value, i);
+
+    					if (each_blocks[i]) {
+    						each_blocks[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks[i] = create_each_block(child_ctx);
+    						each_blocks[i].c();
+    						each_blocks[i].m(div2, null);
+    					}
+    				}
+
+    				for (; i < each_blocks.length; i += 1) {
+    					each_blocks[i].d(1);
+    				}
+
+    				each_blocks.length = each_value.length;
+    			}
     		},
     		i: function intro(local) {
     			if (current) return;
-    			transition_in(editor.$$.fragment, local);
     			transition_in(board_1.$$.fragment, local);
     			current = true;
     		},
     		o: function outro(local) {
-    			transition_out(editor.$$.fragment, local);
     			transition_out(board_1.$$.fragment, local);
     			current = false;
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(main);
-    			destroy_component(editor);
     			destroy_component(board_1);
+    			destroy_each(each_blocks, detaching);
     		}
     	};
 
@@ -1619,13 +2131,16 @@ var app = (function () {
     	return block;
     }
 
+    const n = 16;
+
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
-    	const board = Array.from(Array(10), () => new Array(10));
+    	const board = Array.from(Array(n), () => new Array(n));
 
     	addEventListener("DOMContentLoaded", () => {
     		const editor = document.getElementById("editor");
+    		const lexer = getLexer(true);
 
     		function sleep(ms) {
     			console.log("Sleep", ms);
@@ -1638,20 +2153,42 @@ var app = (function () {
     			return 0;
     		}
 
-    		async function exec() {
-    			board.forEach(row => row.fill(0));
-    			const prog = run(editor.value, { vars: {}, funcs: { sleep, color } });
-    			console.log("Program Length:", prog.length);
-
-    			for (let e of prog) {
-    				console.log(e);
-    				await e.eval();
+    		function token(text, kind) {
+    			if (kind === K.WS) {
+    				return document.createTextNode(text);
+    			} else {
+    				const e = document.createElement("t");
+    				e.innerText = text;
+    				e.setAttribute("kind", kind.toString());
+    				return e;
     			}
     		}
 
-    		editor.addEventListener("input", exec);
-    		editor.value = "color(0, 0, 1)";
-    		exec();
+    		const highlight = editor => {
+    			const code = editor.textContent;
+    			const div = document.createElement("div");
+    			let tokens = lexer.parse(code);
+    			console.log(tokens);
+
+    			while (tokens) {
+    				div.appendChild(token(tokens.text, tokens.kind));
+    				tokens = tokens.next;
+    			}
+
+    			console.log(div);
+    			editor.innerHTML = div.innerHTML;
+    		};
+
+    		const jar = CodeJar(editor, highlight, { tab: "  ", indentOn: /.*:$/ });
+
+    		function exec(code) {
+    			console.log("executing", code);
+    			board.forEach(row => row.fill(0));
+    			const prog = parse(code, { vars: {}, funcs: { sleep, color } });
+    			prog.forEach(s => s.eval());
+    		}
+
+    		jar.onUpdate(exec);
     	});
 
     	const writable_props = [];
@@ -1660,7 +2197,16 @@ var app = (function () {
     		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
-    	$$self.$capture_state = () => ({ Board, Editor, run, board });
+    	$$self.$capture_state = () => ({
+    		CodeJar,
+    		Board,
+    		getLexer,
+    		K,
+    		parse,
+    		n,
+    		board
+    	});
+
     	return [board];
     }
 
