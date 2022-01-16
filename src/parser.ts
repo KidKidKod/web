@@ -4,6 +4,7 @@ import { rep, alt, apply, kmid, lrec, lrec_sc, seq, str, tok } from 'typescript-
 
 export enum K {
     KW,
+    Comment,
     Number,
     Op1,
     Op2,
@@ -19,6 +20,7 @@ export enum K {
 export function getLexer(keepWs = false) {
     return buildLexer([
         [keepWs, /^\s+/g, K.WS],
+        [true, /^#[^\n]*/g, K.Comment],
         [true, /^(if|each|from|to|end)/g, K.KW],
         [true, /^\d+/g, K.Number],
         [true, /^=/g, K.Assign],
@@ -112,6 +114,7 @@ export function parse(
     const ASSIGN = rule<K, Exp>();
     const EACH = rule<K, Exp>();
     const IF = rule<K, Exp>();
+    const COMMENT = rule<K, Exp>();
     const STMT = rule<K, Exp>();
     const PROG = rule<K, Exp[]>();
 
@@ -245,12 +248,17 @@ export function parse(
             expAssign),
     )
 
+    COMMENT.setPattern(
+        apply(tok(K.Comment), () => { return { eval: () => 0 } })
+    )
+
     STMT.setPattern(
         alt(
             ASSIGN,
             FUNC_CALL,
             EACH,
-            IF
+            IF,
+            COMMENT
         )
     )
 

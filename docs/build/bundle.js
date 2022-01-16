@@ -1833,20 +1833,22 @@ var app = (function () {
     var K;
     (function (K) {
         K[K["KW"] = 0] = "KW";
-        K[K["Number"] = 1] = "Number";
-        K[K["Op1"] = 2] = "Op1";
-        K[K["Op2"] = 3] = "Op2";
-        K[K["Assign"] = 4] = "Assign";
-        K[K["Comma"] = 5] = "Comma";
-        K[K["Col"] = 6] = "Col";
-        K[K["LP"] = 7] = "LP";
-        K[K["RP"] = 8] = "RP";
-        K[K["WS"] = 9] = "WS";
-        K[K["Name"] = 10] = "Name";
+        K[K["Comment"] = 1] = "Comment";
+        K[K["Number"] = 2] = "Number";
+        K[K["Op1"] = 3] = "Op1";
+        K[K["Op2"] = 4] = "Op2";
+        K[K["Assign"] = 5] = "Assign";
+        K[K["Comma"] = 6] = "Comma";
+        K[K["Col"] = 7] = "Col";
+        K[K["LP"] = 8] = "LP";
+        K[K["RP"] = 9] = "RP";
+        K[K["WS"] = 10] = "WS";
+        K[K["Name"] = 11] = "Name";
     })(K || (K = {}));
     function getLexer(keepWs = false) {
         return lib.buildLexer([
             [keepWs, /^\s+/g, K.WS],
+            [true, /^#[^\n]*/g, K.Comment],
             [true, /^(if|each|from|to|end)/g, K.KW],
             [true, /^\d+/g, K.Number],
             [true, /^=/g, K.Assign],
@@ -1914,6 +1916,7 @@ var app = (function () {
         const ASSIGN = lib.rule();
         const EACH = lib.rule();
         const IF = lib.rule();
+        const COMMENT = lib.rule();
         const STMT = lib.rule();
         const PROG = lib.rule();
         ARGS.setPattern(lib.alt(lib.apply(lib.seq(lib.tok(K.LP), lib.tok(K.RP)), () => []), lib.kmid(lib.tok(K.LP), lib.lrec_sc(lib.apply(EXP, e => [e]), lib.seq(lib.tok(K.Comma), EXP), args), lib.tok(K.RP))));
@@ -1956,7 +1959,8 @@ var app = (function () {
             };
         }
         ASSIGN.setPattern(lib.apply(lib.seq(lib.tok(K.Name), lib.tok(K.Assign), EXP), expAssign));
-        STMT.setPattern(lib.alt(ASSIGN, FUNC_CALL, EACH, IF));
+        COMMENT.setPattern(lib.apply(lib.tok(K.Comment), () => { return { eval: () => 0 }; }));
+        STMT.setPattern(lib.alt(ASSIGN, FUNC_CALL, EACH, IF, COMMENT));
         PROG.setPattern(lib.rep_sc(STMT));
         return lib.expectSingleResult(lib.expectEOF(PROG.parse(lexer.parse(input))));
     }
