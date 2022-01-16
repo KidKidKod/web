@@ -1,4 +1,4 @@
-import type { Token } from 'typescript-parsec';
+import { rep_sc, Token } from 'typescript-parsec';
 import { buildLexer, expectEOF, expectSingleResult, rule } from 'typescript-parsec';
 import { rep, alt, apply, kmid, lrec, lrec_sc, seq, str, tok } from 'typescript-parsec';
 
@@ -39,20 +39,26 @@ const ops = {
     '%': (a: number, b: number) => a % b,
 }
 
+interface Host {
+    vars: { [name: string]: number },
+    funcs: { [name: string]: (...args) => any }
+}
 
-export function run(input: string, vars: { [name: string]: number } = {}): any {
+export function run(
+    input: string, host: Host = { vars: {}, funcs: {} }): any {
+
     function n(num: Token<K.Number>): number {
         return +num.text
     }
 
     function expVar(name: Token<K.Name>): Exp {
         const v = name.text
-        if (!(v in vars)) {
-            vars[v] = 0
+        if (!(v in host.vars)) {
+            host.vars[v] = 0
         }
 
         return {
-            eval: () => vars[v]
+            eval: () => host.vars[v]
         };
     }
 
@@ -71,20 +77,62 @@ export function run(input: string, vars: { [name: string]: number } = {}): any {
     }
 
 
+    function expFuncCall(value: [Token<K.Name>, Exp[]]) {
+        const [name, args] = value;
+        if (!(name.text in host.funcs)) {
+            host.funcs[name.text] = (...args) => 0
+        }
+
+        return {
+            eval: () => {
+                const vals = args.map(x => x.eval())
+                return host.funcs[name.text](...vals);
+            }
+        }
+    }
+
     function expAssign(value: [Token<K.Name>, Token<K.Assign>, Exp]) {
         const [name, _, exp] = value;
         const val = exp.eval()
         return {
             eval: () => {
-                return vars[name.text] = val;
+                return host.vars[name.text] = val;
             }
         }
     }
 
+    function args(args: Exp[], arg: [Token<K>, Exp]): Exp[] {
+        args.push(arg[1])
+        return args;
+    }
+
+    const ARGS = rule<K, Exp[]>();
     const TERM = rule<K, Exp>();
     const FACTOR = rule<K, Exp>();
     const EXP = rule<K, Exp>();
+    const FUNC_CALL = rule<K, Exp>();
+    const STMT = rule<K, Exp>();
+    const PROG = rule<K, Exp[]>();
 
+    ARGS.setPattern(
+        alt(
+            apply(seq(
+                tok(K.LP),
+                tok(K.RP)
+            ), () => []),
+
+            kmid(
+                tok(K.LP),
+                lrec_sc(
+                    apply(TERM, e => [e]),
+                    seq(
+                        tok(K.Comma),
+                        TERM),
+                    args),
+                tok(K.RP)
+            )
+        )
+    )
 
     TERM.setPattern(
         alt(
@@ -101,26 +149,34 @@ export function run(input: string, vars: { [name: string]: number } = {}): any {
     EXP.setPattern(
         alt(
             lrec_sc(FACTOR, seq(tok(K.Op2), FACTOR), expOp),
+            FUNC_CALL
+        )
+    )
+
+    FUNC_CALL.setPattern(
+        apply(
+            seq(
+                tok(K.Name),
+                ARGS
+            ),
+            expFuncCall),
+    )
+
+    STMT.setPattern(
+        alt(
             apply(
                 seq(
                     tok(K.Name),
                     tok(K.Assign),
                     EXP),
-                expAssign)
+                expAssign),
+            FUNC_CALL
         )
     )
 
-    return expectSingleResult(expectEOF(EXP.parse(lexer.parse(input))));
+    PROG.setPattern(
+        rep_sc(STMT)
+    )
+
+    return expectSingleResult(expectEOF(PROG.parse(lexer.parse(input))));
 }
-
-
-/*
-while i < 10
-    j = 0
-    i = i + 1
-    while j < 10
-        j = j + 1
-        board[i][j] = 1
-    end
-end
-*/
