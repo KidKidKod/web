@@ -1,37 +1,43 @@
-import { parse } from './parser';
+import { run } from './parser';
 
-class TestProg {
-    vals = []
-
-    reset() {
-        this.vals = []
-    }
-
-    assign(i: number, j: number, val: number) {
-        console.log(i, j, val)
-        this.vals.push([i, j, val]);
-    }
-}
-
-const assign = 'board[0][0] = 1'
-test(assign, () => {
-    const testBoard = new TestProg();
-    const res = parse(assign, testBoard);
-    expect(testBoard.vals).toEqual([[0, 0, 1]]);
+test('Test exp', () => {
+    expect(run('a = 1 + 2')[0].eval()).toEqual(3);
+    expect(run('a = 2 - 1')[0].eval()).toEqual(1);
+    expect(run('a = 2 * 3')[0].eval()).toEqual(6);
+    expect(run('a = 4 / 2')[0].eval()).toEqual(2);
+    expect(run('a = 5 % 2')[0].eval()).toEqual(1);
 })
 
-const comment = '# this is a comment'
-test(comment, () => {
-    const testBoard = new TestProg();
-    const res = parse(comment, testBoard);
-    expect(testBoard.vals).toEqual([]);
+test('Test long exp', () => {
+    expect(run('a = 1 + 2 + 3')[0].eval()).toEqual(6);
+    expect(run('a = 1 + 2 * 3')[0].eval()).toEqual(7);
+    expect(run('a = 2 * 2 + 3')[0].eval()).toEqual(7);
+    expect(run('a = 2 * (2 + 3)')[0].eval()).toEqual(10);
 })
 
-const comments = `# board[0][0] = 1
-# board[1][1] = 2
-`
-test(comment, () => {
-    const testBoard = new TestProg();
-    const res = parse(comments, testBoard);
-    expect(testBoard.vals).toEqual([]);
+test('Var', () => {
+    const host = { vars: {}, funcs: {} };
+
+    run('x = 1', host)[0].eval()
+    run('y = x', host)[0].eval()
+    run('z = x + y + z + 1', host)[0].eval()
+
+    expect(host.vars).toEqual({ x: 1, y: 1, z: 3 });
 })
+
+test('Func', () => {
+    const host = { vars: {}, funcs: { three: () => 3 } };
+    const res = run('three()', host)[0].eval()
+    expect(res).toEqual(3);
+})
+
+test('Func with args', () => {
+    const host = { vars: {}, funcs: { add: (a: number, b: number) => a + b } };
+    const res = run('add(1, 2)', host)[0].eval()
+    expect(res).toEqual(3);
+})
+
+test('Color', () => {
+    const res = run('color(0, 0, 1)')[0].eval()
+})
+

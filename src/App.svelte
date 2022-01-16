@@ -1,26 +1,45 @@
 <script lang="ts">
+	import { select_option } from "svelte/internal";
+
 	import Board from "./Board.svelte";
 	import Editor from "./Editor.svelte";
-	import { parse } from "./parser";
+	import { run } from "./parser";
 
 	const board = Array.from(Array(10), () => new Array(10));
-	class Prog {
-		reset() {
-			board.forEach((row) => row.fill(0));
+
+	addEventListener("DOMContentLoaded", () => {
+		const editor = document.getElementById("editor") as HTMLTextAreaElement;
+
+		function sleep(ms: number) {
+			console.log("Sleep", ms);
+			return new Promise((resolve) => setTimeout(resolve, ms));
 		}
 
-		assign(x: number, y: number, value: number) {
-			board[x][y] = value;
+		function color(i: number, j: number, v: number) {
+			console.log(i, j, v);
+			board[i][j] = v;
+			return 0;
 		}
-	}
-	const prog = new Prog();
-	addEventListener("DOMContentLoaded", () => {
-		console.log("DOMContentLoaded");
-		const editor = document.getElementById("editor") as HTMLTextAreaElement;
-		editor.addEventListener("input", () => {
-			console.log(editor.value);
-			parse(editor.value, prog);
-		});
+
+		async function exec() {
+			board.forEach((row) => row.fill(0));
+
+			const prog = run(editor.value, {
+				vars: {},
+				funcs: { sleep, color },
+			});
+
+			console.log("Program Length:", prog.length);
+
+			for (let e of prog) {
+				console.log(e);
+				await e.eval();
+			}
+		}
+
+		editor.addEventListener("input", exec);
+		editor.value = "color(0, 0, 1)";
+		exec();
 	});
 </script>
 

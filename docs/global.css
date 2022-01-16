@@ -15,3 +15,11 @@ html, body {
 [data-color='2'] {
 	background-color: blue;
 }
+
+[data-color='3'] {
+	background-color: gold;
+}
+
+[data-color='4'] {
+	background-color: pink;
+}
