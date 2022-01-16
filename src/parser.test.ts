@@ -38,6 +38,12 @@ test('Func with args', () => {
     expect(res).toEqual(3);
 })
 
+test('Func with expression', () => {
+    const host = { vars: {}, funcs: { add: (a: number) => a + 1 } };
+    const res = parse('add((3 + 7) % 4)', host)[0].eval()
+    expect(res).toEqual(3);
+})
+
 test('Color', () => {
     const res = parse('color(0, 0, 1)')[0].eval()
 })

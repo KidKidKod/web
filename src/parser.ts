@@ -125,10 +125,10 @@ export function parse(
             kmid(
                 tok(K.LP),
                 lrec_sc(
-                    apply(TERM, e => [e]),
+                    apply(EXP, e => [e]),
                     seq(
                         tok(K.Comma),
-                        TERM),
+                        EXP),
                     args),
                 tok(K.RP)
             )
