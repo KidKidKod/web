@@ -1,25 +1,75 @@
 * {
-	box-sizing: border-box;
+    box-sizing: border-box;
 }
 
-html, body {
-	position: relative;
-	width: 100%;
-	height: 100%;
+html,
+body {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+t[kind='0'] {
+    font-weight: bold;
+    color: blue;
 }
 
 [data-color='1'] {
-	background-color: red;
+    background-color: #000000;
 }
 
 [data-color='2'] {
-	background-color: blue;
+    background-color: #252525;
 }
 
 [data-color='3'] {
-	background-color: gold;
+    background-color: #676767;
 }
 
 [data-color='4'] {
-	background-color: pink;
+    background-color: #171723;
+}
+
+[data-color='5'] {
+    background-color: #004949;
+}
+
+[data-color='6'] {
+    background-color: #009999;
+}
+
+[data-color='7'] {
+    background-color: #22cf22;
+}
+
+[data-color='8'] {
+    background-color: #490092;
+}
+
+[data-color='9'] {
+    background-color: #006ddb;
+}
+
+[data-color='10'] {
+    background-color: #b66dff;
+}
+
+[data-color='11'] {
+    background-color: #ff6db6;
+}
+
+[data-color='12'] {
+    background-color: #920000;
+}
+
+[data-color='13'] {
+    background-color: #8f4e00;
+}
+
+[data-color='14'] {
+    background-color: #db6d00;
+}
+
+[data-color='15'] {
+    background-color: #ffdf4d;
 }
