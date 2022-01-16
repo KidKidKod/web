@@ -1,4 +1,4 @@
-import { parse } from './parser';
+import { getLexer, KW_HEBREW, parse } from './parser';
 
 test('Test exp', () => {
     expect(parse('a = 1 + 2')[0].eval()).toEqual(3);
@@ -19,28 +19,28 @@ test('Test long exp', () => {
 test('Var', () => {
     const host = { vars: {}, funcs: {} };
 
-    parse('x = 1', host)[0].eval()
-    parse('y = x', host)[0].eval()
-    parse('z = x + y + z + 1', host)[0].eval()
+    parse('x = 1', { host })[0].eval()
+    parse('y = x', { host })[0].eval()
+    parse('z = x + y + z + 1', { host })[0].eval()
 
     expect(host.vars).toEqual({ x: 1, y: 1, z: 3 });
 })
 
 test('Func', () => {
     const host = { vars: {}, funcs: { three: () => 3 } };
-    const res = parse('three()', host)[0].eval()
+    const res = parse('three()', { host })[0].eval()
     expect(res).toEqual(3);
 })
 
 test('Func with args', () => {
     const host = { vars: {}, funcs: { add: (a: number, b: number) => a + b } };
-    const res = parse('add(1, 2)', host)[0].eval()
+    const res = parse('add(1, 2)', { host })[0].eval()
     expect(res).toEqual(3);
 })
 
 test('Func with expression', () => {
     const host = { vars: {}, funcs: { add: (a: number) => a + 1 } };
-    const res = parse('add((3 + 7) % 4)', host)[0].eval()
+    const res = parse('add((3 + 7) % 4)', { host })[0].eval()
     expect(res).toEqual(3);
 })
 
@@ -50,7 +50,7 @@ test('Color', () => {
 
 test('Each Loop', () => {
     const host = { vars: {}, funcs: {} };
-    const prog = parse('each row from 1 to 10: a = row end', host)
+    const prog = parse('each row from 1 to 10: a = row end', { host })
     expect(prog.length).toEqual(1);
     prog.forEach(x => x.eval())
     expect(host.vars).toEqual({ row: 10, a: 10 })
@@ -58,7 +58,7 @@ test('Each Loop', () => {
 
 test('If true', () => {
     const host = { vars: {}, funcs: {} };
-    const prog = parse('if 1: a = 7 end', host)
+    const prog = parse('if 1: a = 7 end', { host })
 
     prog.forEach(x => x.eval())
     expect(host.vars).toEqual({ a: 7 })
@@ -66,9 +66,15 @@ test('If true', () => {
 
 test('If false', () => {
     const host = { vars: {}, funcs: {} };
-    const prog = parse('if 0: a = 7 end', host)
+    const prog = parse('if 0: a = 7 end', { host })
 
     prog.forEach(x => x.eval())
     expect(host.vars).toEqual({})
 })
 
+test('Hebrew', () => {
+    parse('שלוש = 3', { lexer: getLexer(false, KW_HEBREW) })
+    parse('צבע(1,1,1)', { lexer: getLexer(false, KW_HEBREW) })
+    const prog = 'לכל שורה מ 0 עד 10: צבע(שורה, 0, 1) סוף'
+    parse(prog, { lexer: getLexer(false, KW_HEBREW) })
+})

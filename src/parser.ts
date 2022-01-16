@@ -3,7 +3,11 @@ import { buildLexer, expectEOF, expectSingleResult, rule } from 'typescript-pars
 import { rep, alt, apply, kmid, lrec, lrec_sc, seq, str, tok } from 'typescript-parsec';
 
 export enum K {
-    KW,
+    If,
+    Each,
+    From,
+    To,
+    End,
     Comment,
     Number,
     Op1,
@@ -17,11 +21,39 @@ export enum K {
     Name,
 }
 
-export function getLexer(keepWs = false) {
+interface KW {
+    If: string
+    Each: string
+    From: string
+    To: string
+    End: string
+}
+
+const KW_ENGLISH = {
+    If: 'if',
+    Each: 'each',
+    From: 'from',
+    To: 'to',
+    End: 'end',
+}
+
+export const KW_HEBREW = {
+    If: 'אם',
+    Each: 'לכל',
+    From: 'מ',
+    To: 'עד',
+    End: 'סוף',
+}
+
+export function getLexer(keepWs = false, KW = KW_ENGLISH) {
     return buildLexer([
         [keepWs, /^\s+/g, K.WS],
         [true, /^#[^\n]*/g, K.Comment],
-        [true, /^(if|each|from|to|end)/g, K.KW],
+        [true, new RegExp(`^${KW.If}`, 'g'), K.If],
+        [true, new RegExp(`^${KW.Each}`, 'g'), K.Each],
+        [true, new RegExp(`^${KW.From}`, 'g'), K.From],
+        [true, new RegExp(`^${KW.To}`, 'g'), K.To],
+        [true, new RegExp(`^${KW.End}`, 'g'), K.End],
         [true, /^\d+/g, K.Number],
         [true, /^=/g, K.Assign],
         [true, /^[*/%]/g, K.Op1],
@@ -30,12 +62,9 @@ export function getLexer(keepWs = false) {
         [true, /^:/g, K.Col],
         [true, /^\(/g, K.LP],
         [true, /^\)/g, K.RP],
-        [true, /^[a-z_]+/g, K.Name],
+        [true, /^[a-z_א-ת]+/g, K.Name],
     ])
 }
-
-const lexer = getLexer();
-
 
 interface Exp {
     eval(): number
@@ -54,8 +83,7 @@ interface Host {
     funcs: { [name: string]: (...args) => any }
 }
 
-export function parse(
-    input: string, host: Host = { vars: {}, funcs: {} }): any {
+export function parse(input: string, { lexer = getLexer(), host = { vars: {}, funcs: {} } } = {}): any {
 
     function n(num: Token<K.Number>): number {
         return +num.text
@@ -167,13 +195,13 @@ export function parse(
     )
 
     function expEach(value: [
-        Token<K.KW>,
-        Token<K.Name>,
+        Token<K>,
+        Token<K>,
         Token<K>,
         Exp,
         Token<K>,
         Exp,
-        Token<K.Col>,
+        Token<K>,
         Exp[],
         Token<K>,
     ]): Exp {
@@ -192,15 +220,15 @@ export function parse(
     EACH.setPattern(
         apply(
             seq(
-                str('each'),
+                tok(K.Each),
                 tok(K.Name),
-                str('from'),
+                tok(K.From),
                 EXP,
-                str('to'),
+                tok(K.To),
                 EXP,
                 tok(K.Col),
                 PROG,
-                str('end'),
+                tok(K.End),
             ),
             expEach)
     )
@@ -221,11 +249,11 @@ export function parse(
     IF.setPattern(
         apply(
             seq(
-                str('if'),
+                tok(K.If),
                 EXP,
                 tok(K.Col),
                 PROG,
-                str('end'),
+                tok(K.End),
             ),
             expIf)
     )

@@ -1832,24 +1832,46 @@ var app = (function () {
 
     var K;
     (function (K) {
-        K[K["KW"] = 0] = "KW";
-        K[K["Comment"] = 1] = "Comment";
-        K[K["Number"] = 2] = "Number";
-        K[K["Op1"] = 3] = "Op1";
-        K[K["Op2"] = 4] = "Op2";
-        K[K["Assign"] = 5] = "Assign";
-        K[K["Comma"] = 6] = "Comma";
-        K[K["Col"] = 7] = "Col";
-        K[K["LP"] = 8] = "LP";
-        K[K["RP"] = 9] = "RP";
-        K[K["WS"] = 10] = "WS";
-        K[K["Name"] = 11] = "Name";
+        K[K["If"] = 0] = "If";
+        K[K["Each"] = 1] = "Each";
+        K[K["From"] = 2] = "From";
+        K[K["To"] = 3] = "To";
+        K[K["End"] = 4] = "End";
+        K[K["Comment"] = 5] = "Comment";
+        K[K["Number"] = 6] = "Number";
+        K[K["Op1"] = 7] = "Op1";
+        K[K["Op2"] = 8] = "Op2";
+        K[K["Assign"] = 9] = "Assign";
+        K[K["Comma"] = 10] = "Comma";
+        K[K["Col"] = 11] = "Col";
+        K[K["LP"] = 12] = "LP";
+        K[K["RP"] = 13] = "RP";
+        K[K["WS"] = 14] = "WS";
+        K[K["Name"] = 15] = "Name";
     })(K || (K = {}));
-    function getLexer(keepWs = false) {
+    const KW_ENGLISH = {
+        If: 'if',
+        Each: 'each',
+        From: 'from',
+        To: 'to',
+        End: 'end',
+    };
+    const KW_HEBREW = {
+        If: 'אם',
+        Each: 'לכל',
+        From: 'מ',
+        To: 'עד',
+        End: 'סוף',
+    };
+    function getLexer(keepWs = false, KW = KW_ENGLISH) {
         return lib.buildLexer([
             [keepWs, /^\s+/g, K.WS],
             [true, /^#[^\n]*/g, K.Comment],
-            [true, /^(if|each|from|to|end)/g, K.KW],
+            [true, new RegExp(`^${KW.If}`, 'g'), K.If],
+            [true, new RegExp(`^${KW.Each}`, 'g'), K.Each],
+            [true, new RegExp(`^${KW.From}`, 'g'), K.From],
+            [true, new RegExp(`^${KW.To}`, 'g'), K.To],
+            [true, new RegExp(`^${KW.End}`, 'g'), K.End],
             [true, /^\d+/g, K.Number],
             [true, /^=/g, K.Assign],
             [true, /^[*/%]/g, K.Op1],
@@ -1858,10 +1880,9 @@ var app = (function () {
             [true, /^:/g, K.Col],
             [true, /^\(/g, K.LP],
             [true, /^\)/g, K.RP],
-            [true, /^[a-z_]+/g, K.Name],
+            [true, /^[a-z_א-ת]+/g, K.Name],
         ]);
     }
-    const lexer = getLexer();
     const ops = {
         '-': (a, b) => a - b,
         '+': (a, b) => a + b,
@@ -1869,7 +1890,7 @@ var app = (function () {
         '/': (a, b) => a / b,
         '%': (a, b) => a % b,
     };
-    function parse(input, host = { vars: {}, funcs: {} }) {
+    function parse(input, { lexer = getLexer(), host = { vars: {}, funcs: {} } } = {}) {
         function n(num) {
             return +num.text;
         }
@@ -1936,7 +1957,7 @@ var app = (function () {
                 }
             };
         }
-        EACH.setPattern(lib.apply(lib.seq(lib.str('each'), lib.tok(K.Name), lib.str('from'), EXP, lib.str('to'), EXP, lib.tok(K.Col), PROG, lib.str('end')), expEach));
+        EACH.setPattern(lib.apply(lib.seq(lib.tok(K.Each), lib.tok(K.Name), lib.tok(K.From), EXP, lib.tok(K.To), EXP, lib.tok(K.Col), PROG, lib.tok(K.End)), expEach));
         function expIf(value) {
             const [$1, cond, $2, prog, $3] = value;
             return {
@@ -1949,7 +1970,7 @@ var app = (function () {
                 }
             };
         }
-        IF.setPattern(lib.apply(lib.seq(lib.str('if'), EXP, lib.tok(K.Col), PROG, lib.str('end')), expIf));
+        IF.setPattern(lib.apply(lib.seq(lib.tok(K.If), EXP, lib.tok(K.Col), PROG, lib.tok(K.End)), expIf));
         function expAssign(value) {
             const [name, _, exp] = value;
             return {
@@ -1976,7 +1997,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (73:2) {#each [...Array(16).keys()] as i}
+    // (82:2) {#each [...Array(16).keys()] as i}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*i*/ ctx[1] + "";
@@ -1990,7 +2011,7 @@ var app = (function () {
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[1]);
     			attr_dev(div, "class", "svelte-1ufx59h");
-    			add_location(div, file, 73, 3, 2038);
+    			add_location(div, file, 82, 3, 2336);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -2007,7 +2028,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(73:2) {#each [...Array(16).keys()] as i}",
+    		source: "(82:2) {#each [...Array(16).keys()] as i}",
     		ctx
     	});
 
@@ -2053,13 +2074,14 @@ var app = (function () {
 
     			attr_dev(div0, "id", "editor");
     			attr_dev(div0, "class", "svelte-1ufx59h");
-    			add_location(div0, file, 68, 2, 1928);
+    			add_location(div0, file, 77, 2, 2226);
     			attr_dev(div1, "class", "edit svelte-1ufx59h");
-    			add_location(div1, file, 67, 1, 1907);
+    			add_location(div1, file, 76, 1, 2205);
     			attr_dev(div2, "class", "colors svelte-1ufx59h");
-    			add_location(div2, file, 71, 1, 1977);
+    			add_location(div2, file, 80, 1, 2275);
+    			attr_dev(main, "dir", "rtl");
     			attr_dev(main, "class", "svelte-1ufx59h");
-    			add_location(main, file, 66, 0, 1899);
+    			add_location(main, file, 75, 0, 2187);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2144,7 +2166,7 @@ var app = (function () {
 
     	addEventListener("DOMContentLoaded", () => {
     		const editor = document.getElementById("editor");
-    		const lexer = getLexer(true);
+    		const lexer = getLexer(true, KW_HEBREW);
 
     		function sleep(ms) {
     			console.log("Sleep", ms);
@@ -2163,7 +2185,8 @@ var app = (function () {
     			} else {
     				const e = document.createElement("t");
     				e.innerText = text;
-    				e.setAttribute("kind", kind.toString());
+    				const isKw = kind in [K.If, K.Each, K.From, K.To, K.End];
+    				e.setAttribute("kw", isKw ? "true" : "false");
     				return e;
     			}
     		}
@@ -2188,18 +2211,23 @@ var app = (function () {
     		function exec(code) {
     			console.log("executing", code);
     			board.forEach(row => row.fill(0));
-    			const prog = parse(code, { vars: {}, funcs: { sleep, color } });
+
+    			const host = {
+    				vars: {},
+    				funcs: { sleep, color, צבע: color, נמנם: sleep }
+    			};
+
+    			const prog = parse(code, { host, lexer: getLexer(false, KW_HEBREW) });
     			prog.forEach(s => s.eval());
     		}
 
     		jar.onUpdate(exec);
 
-    		const code = `each row from 0 to 15:
-  each col from 0 to 15:
-    c = (row + col) % 2
-    color(row, col, c)
-  end
-end`;
+    		const code = `לכל שורה מ 0 עד 16:
+  לכל עמודה מ 0 עד 16:
+    צבע(שורה, עמודה, (שורה + עמודה) % 2)
+  סוף
+סוף`;
 
     		jar.updateCode(code);
     		exec(code);
@@ -2216,6 +2244,7 @@ end`;
     		Board,
     		getLexer,
     		K,
+    		KW_HEBREW,
     		parse,
     		n,
     		board
