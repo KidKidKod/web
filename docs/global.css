@@ -9,7 +9,7 @@ body {
     height: 100%;
 }
 
-t[kind='0'] {
+t[kw='true'] {
     font-weight: bold;
     color: blue;
 }

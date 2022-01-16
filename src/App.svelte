@@ -2,14 +2,14 @@
 	// https://github.com/antonmedv/codejar
 	import { CodeJar } from "codejar";
 	import Board from "./Board.svelte";
-	import { getLexer, K, parse } from "./parser";
+	import { getLexer, K, KW_HEBREW, parse } from "./parser";
 
 	const n = 16;
 	const board = Array.from(Array(n), () => new Array(n));
 
 	addEventListener("DOMContentLoaded", () => {
 		const editor = document.getElementById("editor") as HTMLTextAreaElement;
-		const lexer = getLexer(true);
+		const lexer = getLexer(true, KW_HEBREW);
 
 		function sleep(ms: number) {
 			console.log("Sleep", ms);
@@ -28,7 +28,8 @@
 			} else {
 				const e = document.createElement("t");
 				e.innerText = text;
-				e.setAttribute("kind", kind.toString());
+				const isKw = kind in [K.If, K.Each, K.From, K.To, K.End];
+				e.setAttribute("kw", isKw ? "true" : "false");
 				return e;
 			}
 		}
@@ -54,28 +55,35 @@
 		function exec(code: string) {
 			console.log("executing", code);
 			board.forEach((row) => row.fill(0));
-
-			const prog = parse(code, {
+			const host = {
 				vars: {},
-				funcs: { sleep, color },
+				funcs: {
+					sleep,
+					color,
+					צבע: color,
+					נמנם: sleep,
+				},
+			};
+			const prog = parse(code, {
+				host,
+				lexer: getLexer(false, KW_HEBREW),
 			});
 
 			prog.forEach((s) => s.eval());
 		}
 
 		jar.onUpdate(exec);
-		const code = `each row from 0 to 15:
-  each col from 0 to 15:
-    c = (row + col) % 2
-    color(row, col, c)
-  end
-end`;
+		const code = `לכל שורה מ 0 עד 16:
+  לכל עמודה מ 0 עד 16:
+    צבע(שורה, עמודה, (שורה + עמודה) % 2)
+  סוף
+סוף`;
 		jar.updateCode(code);
 		exec(code);
 	});
 </script>
 
-<main>
+<main dir="rtl">
 	<div class="edit">
 		<div id="editor" />
 		<Board {board} />
