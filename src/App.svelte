@@ -3,9 +3,67 @@
 	import { CodeJar } from "codejar";
 	import Board from "./Board.svelte";
 	import { getLexer, K, KW_HEBREW, parse } from "./parser";
+	import { Octokit } from "octokit";
 
 	const n = 24;
 	const board = Array.from(Array(n), () => new Array(n));
+	let user;
+
+	async function storeAccessToken(code: string) {
+		const res = await fetch(
+			`https://2dl08ocvy5.execute-api.us-east-1.amazonaws.com/github_login?code=${params.code}`
+		);
+		const json = await res.json();
+		const authParams = Object.fromEntries(
+			new URLSearchParams(json).entries()
+		);
+		localStorage.setItem("access_token", authParams.access_token);
+	}
+
+	const urlSearchParams = new URLSearchParams(window.location.search);
+	const params = Object.fromEntries(urlSearchParams.entries());
+
+	let octokit: Octokit;
+	let gists = [];
+	async function login() {
+		if (params.code) {
+			const path =
+				location.pathname +
+				location.search
+					.replace(/\b(code|state)=\w+/g, "")
+					.replace(/[?&]+$/, "");
+			history.pushState({}, "", path);
+
+			await storeAccessToken(params.code);
+		}
+		const access_token = localStorage.getItem("access_token");
+		octokit = new Octokit({ auth: access_token });
+
+		const {
+			data: { name },
+		} = await octokit.request("GET /user");
+
+		user = name;
+		gists = (await octokit.rest.gists.list()).data;
+		console.log(gists);
+	}
+
+	login();
+
+	let jar;
+	let description;
+	async function save() {
+		const res = await octokit.rest.gists.create({
+			description: description,
+			public: true,
+			files: {
+				"app.kidkidkod": {
+					content: jar.toString(),
+				},
+			},
+		});
+		console.log(res);
+	}
 
 	addEventListener("DOMContentLoaded", () => {
 		const editor = document.getElementById("editor") as HTMLTextAreaElement;
@@ -14,7 +72,6 @@
 		function sleep(ms: number) {}
 
 		function color(i: number, j: number, v: number) {
-			console.log(i, j, v);
 			if (0 <= i && i < n && 0 <= j && j < n) {
 				board[i][j] = v;
 			}
@@ -27,12 +84,7 @@
 			} else {
 				const e = document.createElement("t");
 				e.innerText = text;
-				const isKw = kind in [K.If, K.Each, K.From, K.To, K.End];
-				e.setAttribute("kw", isKw ? "true" : "false");
-				e.setAttribute(
-					"comment",
-					kind === K.Comment ? "true" : "false"
-				);
+				e.setAttribute("kind", kind.toString());
 				return e;
 			}
 		}
@@ -41,23 +93,19 @@
 			const code = editor.textContent;
 			const div = document.createElement("div");
 			let tokens = lexer.parse(code);
-			console.log(tokens);
 			while (tokens) {
 				div.appendChild(token(tokens.text, tokens.kind));
 				tokens = tokens.next;
 			}
-			console.log(div);
 			editor.innerHTML = div.innerHTML;
 		};
 
-		const jar = CodeJar(editor, highlight, {
+		jar = CodeJar(editor, highlight, {
 			tab: "  ",
 			indentOn: /.*:$/,
 		});
 
 		function exec(code: string) {
-			location.hash = encodeURIComponent(code);
-			console.log("executing", code);
 			board.forEach((row) => row.fill(0));
 			const host = {
 				vars: {},
@@ -77,28 +125,28 @@
 		}
 
 		jar.onUpdate(exec);
-		let code = `# דוגמה לשימוש בפונקציה צבע
+		const code = `# דוגמה לשימוש בפונקציה צבע
 		
 לכל שורה מ 0 עד 23:
   לכל עמודה מ 0 עד 23:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף
 סוף`;
-		if (location.hash) {
-			code = location.hash.slice(1);
-			console.log(code);
-			code = decodeURIComponent(code);
-			console.log(code);
-		}
 		jar.updateCode(code);
 		exec(code);
 	});
 </script>
 
 <main dir="rtl">
-	<div class="edit">
-		<div id="editor" />
-		<Board {board} />
+	<div class="menu">
+		{#if user}
+			{user}
+		{:else}
+			<a
+				href="https://github.com/login/oauth/authorize?scope:gist&client_id=b22b1c742cd6f94f2a1e"
+				>התחבר</a
+			>
+		{/if}
 	</div>
 	<div class="colors">
 		{#each [...Array(16).keys()] as i}
@@ -106,6 +154,20 @@
 				{i}
 			</div>
 		{/each}
+	</div>
+	<div class="edit">
+		<div class="col">
+			<div id="editor" />
+			<div class="row margin-top">
+				<input
+					bind:value={description}
+					type="text"
+					placeholder="תיאור"
+				/>
+				<button on:click={save}>שמור</button>
+			</div>
+		</div>
+		<Board {board} />
 	</div>
 </main>
 
@@ -117,7 +179,41 @@
 		margin: 2em auto;
 	}
 
+	.margin-top {
+		margin-top: 1em;
+	}
+
+	.menu {
+		display: flex;
+		flex-direction: row;
+		margin-bottom: 1em;
+		background-color: #333;
+		color: white;
+		padding: 0.5em;
+	}
+
+	a {
+		text-decoration: none;
+		transition: all 0.2s ease-in-out;
+		color: white;
+	}
+
+	a:hover {
+		color: #dfd;
+	}
+
 	.edit {
+		display: flex;
+		flex-direction: row;
+	}
+
+	.col {
+		display: flex;
+		flex-direction: column;
+		flex-grow: 1;
+	}
+
+	.row {
 		display: flex;
 		flex-direction: row;
 	}
@@ -134,7 +230,7 @@
 	}
 
 	.colors {
-		margin-top: 1em;
+		margin-bottom: 1em;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;
@@ -143,9 +239,9 @@
 
 	[data-color] {
 		display: flex;
-		height: 3em;
+		height: 2em;
 		flex-grow: 1;
-		font-size: 2em;
+		font-size: 1em;
 		justify-content: center;
 		align-items: center;
 		color: white;
