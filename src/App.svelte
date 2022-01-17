@@ -29,6 +29,10 @@
 				e.innerText = text;
 				const isKw = kind in [K.If, K.Each, K.From, K.To, K.End];
 				e.setAttribute("kw", isKw ? "true" : "false");
+				e.setAttribute(
+					"comment",
+					kind === K.Comment ? "true" : "false"
+				);
 				return e;
 			}
 		}
@@ -72,7 +76,9 @@
 		}
 
 		jar.onUpdate(exec);
-		const code = `לכל שורה מ 0 עד 15:
+		const code = `# דוגמה לשימוש בפונקציה צבע
+		
+לכל שורה מ 0 עד 15:
   לכל עמודה מ 0 עד 15:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף

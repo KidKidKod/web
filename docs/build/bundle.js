@@ -2097,7 +2097,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (81:2) {#each [...Array(16).keys()] as i}
+    // (84:2) {#each [...Array(16).keys()] as i}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*i*/ ctx[1] + "";
@@ -2111,7 +2111,7 @@ var app = (function () {
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[1]);
     			attr_dev(div, "class", "svelte-oz9st5");
-    			add_location(div, file, 81, 3, 2296);
+    			add_location(div, file, 84, 3, 2405);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -2128,7 +2128,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(81:2) {#each [...Array(16).keys()] as i}",
+    		source: "(84:2) {#each [...Array(16).keys()] as i}",
     		ctx
     	});
 
@@ -2174,14 +2174,14 @@ var app = (function () {
 
     			attr_dev(div0, "id", "editor");
     			attr_dev(div0, "class", "svelte-oz9st5");
-    			add_location(div0, file, 76, 2, 2186);
+    			add_location(div0, file, 79, 2, 2295);
     			attr_dev(div1, "class", "edit svelte-oz9st5");
-    			add_location(div1, file, 75, 1, 2165);
+    			add_location(div1, file, 78, 1, 2274);
     			attr_dev(div2, "class", "colors svelte-oz9st5");
-    			add_location(div2, file, 79, 1, 2235);
+    			add_location(div2, file, 82, 1, 2344);
     			attr_dev(main, "dir", "rtl");
     			attr_dev(main, "class", "svelte-oz9st5");
-    			add_location(main, file, 74, 0, 2147);
+    			add_location(main, file, 77, 0, 2256);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2290,6 +2290,7 @@ var app = (function () {
     				e.innerText = text;
     				const isKw = kind in [K.If, K.Each, K.From, K.To, K.End];
     				e.setAttribute("kw", isKw ? "true" : "false");
+    				e.setAttribute("comment", kind === K.Comment ? "true" : "false");
     				return e;
     			}
     		}
@@ -2326,7 +2327,9 @@ var app = (function () {
 
     		jar.onUpdate(exec);
 
-    		const code = `לכל שורה מ 0 עד 15:
+    		const code = `# דוגמה לשימוש בפונקציה צבע
+		
+לכל שורה מ 0 עד 15:
   לכל עמודה מ 0 עד 15:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף
