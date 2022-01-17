@@ -4,7 +4,7 @@
 	import Board from "./Board.svelte";
 	import { getLexer, K, KW_HEBREW, parse } from "./parser";
 
-	const n = 16;
+	const n = 24;
 	const board = Array.from(Array(n), () => new Array(n));
 
 	addEventListener("DOMContentLoaded", () => {
@@ -56,6 +56,7 @@
 		});
 
 		function exec(code: string) {
+			location.hash = encodeURIComponent(code);
 			console.log("executing", code);
 			board.forEach((row) => row.fill(0));
 			const host = {
@@ -76,13 +77,19 @@
 		}
 
 		jar.onUpdate(exec);
-		const code = `# דוגמה לשימוש בפונקציה צבע
+		let code = `# דוגמה לשימוש בפונקציה צבע
 		
-לכל שורה מ 0 עד 15:
-  לכל עמודה מ 0 עד 15:
+לכל שורה מ 0 עד 23:
+  לכל עמודה מ 0 עד 23:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף
 סוף`;
+		if (location.hash) {
+			code = location.hash.slice(1);
+			console.log(code);
+			code = decodeURIComponent(code);
+			console.log(code);
+		}
 		jar.updateCode(code);
 		exec(code);
 	});

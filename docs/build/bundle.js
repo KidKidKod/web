@@ -2097,7 +2097,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (84:2) {#each [...Array(16).keys()] as i}
+    // (91:2) {#each [...Array(16).keys()] as i}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*i*/ ctx[1] + "";
@@ -2111,7 +2111,7 @@ var app = (function () {
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[1]);
     			attr_dev(div, "class", "svelte-oz9st5");
-    			add_location(div, file, 84, 3, 2405);
+    			add_location(div, file, 91, 3, 2618);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -2128,7 +2128,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(84:2) {#each [...Array(16).keys()] as i}",
+    		source: "(91:2) {#each [...Array(16).keys()] as i}",
     		ctx
     	});
 
@@ -2174,14 +2174,14 @@ var app = (function () {
 
     			attr_dev(div0, "id", "editor");
     			attr_dev(div0, "class", "svelte-oz9st5");
-    			add_location(div0, file, 79, 2, 2295);
+    			add_location(div0, file, 86, 2, 2508);
     			attr_dev(div1, "class", "edit svelte-oz9st5");
-    			add_location(div1, file, 78, 1, 2274);
+    			add_location(div1, file, 85, 1, 2487);
     			attr_dev(div2, "class", "colors svelte-oz9st5");
-    			add_location(div2, file, 82, 1, 2344);
+    			add_location(div2, file, 89, 1, 2557);
     			attr_dev(main, "dir", "rtl");
     			attr_dev(main, "class", "svelte-oz9st5");
-    			add_location(main, file, 77, 0, 2256);
+    			add_location(main, file, 84, 0, 2469);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2257,7 +2257,7 @@ var app = (function () {
     	return block;
     }
 
-    const n = 16;
+    const n = 24;
 
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
@@ -2313,6 +2313,7 @@ var app = (function () {
     		const jar = CodeJar(editor, highlight, { tab: "  ", indentOn: /.*:$/ });
 
     		function exec(code) {
+    			location.hash = encodeURIComponent(code);
     			console.log("executing", code);
     			board.forEach(row => row.fill(0));
 
@@ -2327,13 +2328,20 @@ var app = (function () {
 
     		jar.onUpdate(exec);
 
-    		const code = `# דוגמה לשימוש בפונקציה צבע
+    		let code = `# דוגמה לשימוש בפונקציה צבע
 		
-לכל שורה מ 0 עד 15:
-  לכל עמודה מ 0 עד 15:
+לכל שורה מ 0 עד 23:
+  לכל עמודה מ 0 עד 23:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף
 סוף`;
+
+    		if (location.hash) {
+    			code = location.hash.slice(1);
+    			console.log(code);
+    			code = decodeURIComponent(code);
+    			console.log(code);
+    		}
 
     		jar.updateCode(code);
     		exec(code);
