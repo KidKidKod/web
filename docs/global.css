@@ -9,12 +9,15 @@ body {
     height: 100%;
 }
 
-t[kw='true'] {
+t[kind='1'],
+t[kind='2'],
+t[kind='3'],
+t[kind='4'] {
     font-weight: bold;
     color: blue;
 }
 
-t[comment='true'] {
+t[kind='5'] {
     color: #336633;
     font-weight: bold;
     font-style: italic;
