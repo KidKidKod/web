@@ -823,32 +823,40 @@ var app = (function () {
     function get_each_context$1(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[1] = list[i];
+    	child_ctx[3] = i;
     	return child_ctx;
     }
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
     	child_ctx[4] = list[i];
+    	child_ctx[3] = i;
+    	return child_ctx;
+    }
+
+    function get_each_context_2(ctx, list, i) {
+    	const child_ctx = ctx.slice();
+    	child_ctx[6] = list[i];
     	return child_ctx;
     }
 
     // (8:12) {#each row as color}
-    function create_each_block_1(ctx) {
+    function create_each_block_2(ctx) {
     	let div;
     	let div_data_color_value;
 
     	const block = {
     		c: function create() {
     			div = element("div");
-    			attr_dev(div, "class", "cell svelte-1agfauy");
-    			attr_dev(div, "data-color", div_data_color_value = /*color*/ ctx[4]);
-    			add_location(div, file$1, 8, 16, 190);
+    			attr_dev(div, "class", "cell svelte-1lmg422");
+    			attr_dev(div, "data-color", div_data_color_value = /*color*/ ctx[6]);
+    			add_location(div, file$1, 8, 16, 193);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty & /*board*/ 1 && div_data_color_value !== (div_data_color_value = /*color*/ ctx[4])) {
+    			if (dirty & /*board*/ 1 && div_data_color_value !== (div_data_color_value = /*color*/ ctx[6])) {
     				attr_dev(div, "data-color", div_data_color_value);
     			}
     		},
@@ -859,7 +867,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_each_block_1.name,
+    		id: create_each_block_2.name,
     		type: "each",
     		source: "(8:12) {#each row as color}",
     		ctx
@@ -868,54 +876,62 @@ var app = (function () {
     	return block;
     }
 
-    // (6:4) {#each board as row}
-    function create_each_block$1(ctx) {
-    	let div;
-    	let t;
-    	let each_value_1 = /*row*/ ctx[1];
-    	validate_each_argument(each_value_1);
+    // (6:4) {#each board as row, i}
+    function create_each_block_1(ctx) {
+    	let div1;
+    	let t0;
+    	let div0;
+    	let t1;
+    	let each_value_2 = /*row*/ ctx[4];
+    	validate_each_argument(each_value_2);
     	let each_blocks = [];
 
-    	for (let i = 0; i < each_value_1.length; i += 1) {
-    		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    	for (let i = 0; i < each_value_2.length; i += 1) {
+    		each_blocks[i] = create_each_block_2(get_each_context_2(ctx, each_value_2, i));
     	}
 
     	const block = {
     		c: function create() {
-    			div = element("div");
+    			div1 = element("div");
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
-    			t = space();
-    			attr_dev(div, "class", "row svelte-1agfauy");
-    			add_location(div, file$1, 6, 8, 123);
+    			t0 = space();
+    			div0 = element("div");
+    			t1 = text(/*i*/ ctx[3]);
+    			attr_dev(div0, "class", "num svelte-1lmg422");
+    			add_location(div0, file$1, 10, 12, 265);
+    			attr_dev(div1, "class", "row svelte-1lmg422");
+    			add_location(div1, file$1, 6, 8, 126);
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
+    			insert_dev(target, div1, anchor);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].m(div, null);
+    				each_blocks[i].m(div1, null);
     			}
 
-    			append_dev(div, t);
+    			append_dev(div1, t0);
+    			append_dev(div1, div0);
+    			append_dev(div0, t1);
     		},
     		p: function update(ctx, dirty) {
     			if (dirty & /*board*/ 1) {
-    				each_value_1 = /*row*/ ctx[1];
-    				validate_each_argument(each_value_1);
+    				each_value_2 = /*row*/ ctx[4];
+    				validate_each_argument(each_value_2);
     				let i;
 
-    				for (i = 0; i < each_value_1.length; i += 1) {
-    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+    				for (i = 0; i < each_value_2.length; i += 1) {
+    					const child_ctx = get_each_context_2(ctx, each_value_2, i);
 
     					if (each_blocks[i]) {
     						each_blocks[i].p(child_ctx, dirty);
     					} else {
-    						each_blocks[i] = create_each_block_1(child_ctx);
+    						each_blocks[i] = create_each_block_2(child_ctx);
     						each_blocks[i].c();
-    						each_blocks[i].m(div, t);
+    						each_blocks[i].m(div1, t0);
     					}
     				}
 
@@ -923,12 +939,45 @@ var app = (function () {
     					each_blocks[i].d(1);
     				}
 
-    				each_blocks.length = each_value_1.length;
+    				each_blocks.length = each_value_2.length;
     			}
     		},
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
+    			if (detaching) detach_dev(div1);
     			destroy_each(each_blocks, detaching);
+    		}
+    	};
+
+    	dispatch_dev("SvelteRegisterBlock", {
+    		block,
+    		id: create_each_block_1.name,
+    		type: "each",
+    		source: "(6:4) {#each board as row, i}",
+    		ctx
+    	});
+
+    	return block;
+    }
+
+    // (15:8) {#each board[0] as _, i}
+    function create_each_block$1(ctx) {
+    	let div;
+    	let t;
+
+    	const block = {
+    		c: function create() {
+    			div = element("div");
+    			t = text(/*i*/ ctx[3]);
+    			attr_dev(div, "class", "num svelte-1lmg422");
+    			add_location(div, file$1, 15, 12, 386);
+    		},
+    		m: function mount(target, anchor) {
+    			insert_dev(target, div, anchor);
+    			append_dev(div, t);
+    		},
+    		p: noop,
+    		d: function destroy(detaching) {
+    			if (detaching) detach_dev(div);
     		}
     	};
 
@@ -936,7 +985,7 @@ var app = (function () {
     		block,
     		id: create_each_block$1.name,
     		type: "each",
-    		source: "(6:4) {#each board as row}",
+    		source: "(15:8) {#each board[0] as _, i}",
     		ctx
     	});
 
@@ -944,8 +993,18 @@ var app = (function () {
     }
 
     function create_fragment$1(ctx) {
-    	let div;
-    	let each_value = /*board*/ ctx[0];
+    	let div1;
+    	let t;
+    	let div0;
+    	let each_value_1 = /*board*/ ctx[0];
+    	validate_each_argument(each_value_1);
+    	let each_blocks_1 = [];
+
+    	for (let i = 0; i < each_value_1.length; i += 1) {
+    		each_blocks_1[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
+    	}
+
+    	let each_value = /*board*/ ctx[0][0];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
@@ -955,28 +1014,68 @@ var app = (function () {
 
     	const block = {
     		c: function create() {
-    			div = element("div");
+    			div1 = element("div");
+
+    			for (let i = 0; i < each_blocks_1.length; i += 1) {
+    				each_blocks_1[i].c();
+    			}
+
+    			t = space();
+    			div0 = element("div");
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
-    			attr_dev(div, "class", "board");
-    			add_location(div, file$1, 4, 0, 70);
+    			attr_dev(div0, "class", "row svelte-1lmg422");
+    			add_location(div0, file$1, 13, 4, 323);
+    			attr_dev(div1, "class", "board");
+    			add_location(div1, file$1, 4, 0, 70);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
     		},
     		m: function mount(target, anchor) {
-    			insert_dev(target, div, anchor);
+    			insert_dev(target, div1, anchor);
+
+    			for (let i = 0; i < each_blocks_1.length; i += 1) {
+    				each_blocks_1[i].m(div1, null);
+    			}
+
+    			append_dev(div1, t);
+    			append_dev(div1, div0);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
-    				each_blocks[i].m(div, null);
+    				each_blocks[i].m(div0, null);
     			}
     		},
     		p: function update(ctx, [dirty]) {
     			if (dirty & /*board*/ 1) {
-    				each_value = /*board*/ ctx[0];
+    				each_value_1 = /*board*/ ctx[0];
+    				validate_each_argument(each_value_1);
+    				let i;
+
+    				for (i = 0; i < each_value_1.length; i += 1) {
+    					const child_ctx = get_each_context_1(ctx, each_value_1, i);
+
+    					if (each_blocks_1[i]) {
+    						each_blocks_1[i].p(child_ctx, dirty);
+    					} else {
+    						each_blocks_1[i] = create_each_block_1(child_ctx);
+    						each_blocks_1[i].c();
+    						each_blocks_1[i].m(div1, t);
+    					}
+    				}
+
+    				for (; i < each_blocks_1.length; i += 1) {
+    					each_blocks_1[i].d(1);
+    				}
+
+    				each_blocks_1.length = each_value_1.length;
+    			}
+
+    			if (dirty & /*board*/ 1) {
+    				each_value = /*board*/ ctx[0][0];
     				validate_each_argument(each_value);
     				let i;
 
@@ -988,7 +1087,7 @@ var app = (function () {
     					} else {
     						each_blocks[i] = create_each_block$1(child_ctx);
     						each_blocks[i].c();
-    						each_blocks[i].m(div, null);
+    						each_blocks[i].m(div0, null);
     					}
     				}
 
@@ -1002,7 +1101,8 @@ var app = (function () {
     		i: noop,
     		o: noop,
     		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
+    			if (detaching) detach_dev(div1);
+    			destroy_each(each_blocks_1, detaching);
     			destroy_each(each_blocks, detaching);
     		}
     	};
@@ -1997,7 +2097,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (82:2) {#each [...Array(16).keys()] as i}
+    // (81:2) {#each [...Array(16).keys()] as i}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*i*/ ctx[1] + "";
@@ -2010,8 +2110,8 @@ var app = (function () {
     			t0 = text(t0_value);
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[1]);
-    			attr_dev(div, "class", "svelte-1ufx59h");
-    			add_location(div, file, 82, 3, 2336);
+    			attr_dev(div, "class", "svelte-oz9st5");
+    			add_location(div, file, 81, 3, 2296);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -2028,7 +2128,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(82:2) {#each [...Array(16).keys()] as i}",
+    		source: "(81:2) {#each [...Array(16).keys()] as i}",
     		ctx
     	});
 
@@ -2073,15 +2173,15 @@ var app = (function () {
     			}
 
     			attr_dev(div0, "id", "editor");
-    			attr_dev(div0, "class", "svelte-1ufx59h");
-    			add_location(div0, file, 77, 2, 2226);
-    			attr_dev(div1, "class", "edit svelte-1ufx59h");
-    			add_location(div1, file, 76, 1, 2205);
-    			attr_dev(div2, "class", "colors svelte-1ufx59h");
-    			add_location(div2, file, 80, 1, 2275);
+    			attr_dev(div0, "class", "svelte-oz9st5");
+    			add_location(div0, file, 76, 2, 2186);
+    			attr_dev(div1, "class", "edit svelte-oz9st5");
+    			add_location(div1, file, 75, 1, 2165);
+    			attr_dev(div2, "class", "colors svelte-oz9st5");
+    			add_location(div2, file, 79, 1, 2235);
     			attr_dev(main, "dir", "rtl");
-    			attr_dev(main, "class", "svelte-1ufx59h");
-    			add_location(main, file, 75, 0, 2187);
+    			attr_dev(main, "class", "svelte-oz9st5");
+    			add_location(main, file, 74, 0, 2147);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -2169,13 +2269,16 @@ var app = (function () {
     		const lexer = getLexer(true, KW_HEBREW);
 
     		function sleep(ms) {
-    			console.log("Sleep", ms);
-    			return new Promise(resolve => setTimeout(resolve, ms));
+    			
     		}
 
     		function color(i, j, v) {
     			console.log(i, j, v);
-    			$$invalidate(0, board[i][j] = v, board);
+
+    			if (0 <= i && i < n && 0 <= j && j < n) {
+    				$$invalidate(0, board[i][j] = v, board);
+    			}
+
     			return 0;
     		}
 
@@ -2223,8 +2326,8 @@ var app = (function () {
 
     		jar.onUpdate(exec);
 
-    		const code = `לכל שורה מ 0 עד 16:
-  לכל עמודה מ 0 עד 16:
+    		const code = `לכל שורה מ 0 עד 15:
+  לכל עמודה מ 0 עד 15:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף
 סוף`;

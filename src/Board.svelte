@@ -3,13 +3,19 @@
 </script>
 
 <div class="board">
-    {#each board as row}
+    {#each board as row, i}
         <div class="row">
             {#each row as color}
                 <div class="cell" data-color={color} />
             {/each}
+            <div class="num">{i}</div>
         </div>
     {/each}
+    <div class="row">
+        {#each board[0] as _, i}
+            <div class="num">{i}</div>
+        {/each}
+    </div>
 </div>
 
 <style>
@@ -28,5 +34,15 @@
         height: 1.5em;
         border: 1px solid gray;
         margin-left: 0.2em;
+    }
+
+    .num {
+        margin-left: 0.2em;
+        width: 1.5em;
+        height: 1.5em;
+        color: #333;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 </style>
