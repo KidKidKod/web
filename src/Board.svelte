@@ -30,16 +30,16 @@
     }
 
     .cell {
-        width: 1.5em;
-        height: 1.5em;
+        width: 1.3em;
+        height: 1.3em;
         border: 1px solid gray;
         margin-left: 0.2em;
     }
 
     .num {
         margin-left: 0.2em;
-        width: 1.5em;
-        height: 1.5em;
+        width: 1.3em;
+        height: 1.3em;
         color: #333;
         display: flex;
         justify-content: center;

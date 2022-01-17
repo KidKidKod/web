@@ -848,7 +848,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			div = element("div");
-    			attr_dev(div, "class", "cell svelte-1lmg422");
+    			attr_dev(div, "class", "cell svelte-jfctbq");
     			attr_dev(div, "data-color", div_data_color_value = /*color*/ ctx[6]);
     			add_location(div, file$1, 8, 16, 193);
     		},
@@ -901,9 +901,9 @@ var app = (function () {
     			t0 = space();
     			div0 = element("div");
     			t1 = text(/*i*/ ctx[3]);
-    			attr_dev(div0, "class", "num svelte-1lmg422");
+    			attr_dev(div0, "class", "num svelte-jfctbq");
     			add_location(div0, file$1, 10, 12, 265);
-    			attr_dev(div1, "class", "row svelte-1lmg422");
+    			attr_dev(div1, "class", "row svelte-jfctbq");
     			add_location(div1, file$1, 6, 8, 126);
     		},
     		m: function mount(target, anchor) {
@@ -968,7 +968,7 @@ var app = (function () {
     		c: function create() {
     			div = element("div");
     			t = text(/*i*/ ctx[3]);
-    			attr_dev(div, "class", "num svelte-1lmg422");
+    			attr_dev(div, "class", "num svelte-jfctbq");
     			add_location(div, file$1, 15, 12, 386);
     		},
     		m: function mount(target, anchor) {
@@ -1027,7 +1027,7 @@ var app = (function () {
     				each_blocks[i].c();
     			}
 
-    			attr_dev(div0, "class", "row svelte-1lmg422");
+    			attr_dev(div0, "class", "row svelte-jfctbq");
     			add_location(div0, file$1, 13, 4, 323);
     			attr_dev(div1, "class", "board");
     			add_location(div1, file$1, 4, 0, 70);
