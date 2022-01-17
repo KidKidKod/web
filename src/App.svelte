@@ -11,14 +11,13 @@
 		const editor = document.getElementById("editor") as HTMLTextAreaElement;
 		const lexer = getLexer(true, KW_HEBREW);
 
-		function sleep(ms: number) {
-			console.log("Sleep", ms);
-			return new Promise((resolve) => setTimeout(resolve, ms));
-		}
+		function sleep(ms: number) {}
 
 		function color(i: number, j: number, v: number) {
 			console.log(i, j, v);
-			board[i][j] = v;
+			if (0 <= i && i < n && 0 <= j && j < n) {
+				board[i][j] = v;
+			}
 			return 0;
 		}
 
@@ -73,8 +72,8 @@
 		}
 
 		jar.onUpdate(exec);
-		const code = `לכל שורה מ 0 עד 16:
-  לכל עמודה מ 0 עד 16:
+		const code = `לכל שורה מ 0 עד 15:
+  לכל עמודה מ 0 עד 15:
     צבע(שורה, עמודה, (שורה + עמודה) % 2)
   סוף
 סוף`;
@@ -118,6 +117,7 @@
 		line-height: 1.5;
 		padding: 0.5em;
 		margin: 0;
+		margin-left: 1em;
 	}
 
 	.colors {

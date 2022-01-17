@@ -33,9 +33,9 @@ test('Func', () => {
 })
 
 test('Func with args', () => {
-    const host = { vars: {}, funcs: { add: (a: number, b: number) => a + b } };
-    const res = parse('add(1, 2)', { host })[0].eval()
-    expect(res).toEqual(3);
+    const host = { vars: {}, funcs: { inc: a => a + 1, add: (a: number, b: number) => a + b } };
+    expect(parse('inc(1)', { host })[0].eval()).toEqual(2);
+    expect(parse('add(1, 2)', { host })[0].eval()).toEqual(3);
 })
 
 test('Func with expression', () => {
