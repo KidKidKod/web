@@ -11095,7 +11095,7 @@ var app = (function () {
     	return child_ctx;
     }
 
-    // (119:2) {:else}
+    // (120:2) {:else}
     function create_else_block(ctx) {
     	let a;
 
@@ -11105,7 +11105,7 @@ var app = (function () {
     			a.textContent = "התחבר";
     			attr_dev(a, "href", "https://github.com/login/oauth/authorize?scope:gist&client_id=b22b1c742cd6f94f2a1e");
     			attr_dev(a, "class", "svelte-dvksro");
-    			add_location(a, file, 119, 3, 3483);
+    			add_location(a, file, 120, 3, 3504);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, a, anchor);
@@ -11120,14 +11120,14 @@ var app = (function () {
     		block,
     		id: create_else_block.name,
     		type: "else",
-    		source: "(119:2) {:else}",
+    		source: "(120:2) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (117:2) {#if user}
+    // (118:2) {#if user}
     function create_if_block(ctx) {
     	let t;
 
@@ -11150,14 +11150,14 @@ var app = (function () {
     		block,
     		id: create_if_block.name,
     		type: "if",
-    		source: "(117:2) {#if user}",
+    		source: "(118:2) {#if user}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (127:2) {#each [...Array(16).keys()] as i}
+    // (128:2) {#each [...Array(16).keys()] as i}
     function create_each_block(ctx) {
     	let div;
     	let t0_value = /*i*/ ctx[12] + "";
@@ -11171,7 +11171,7 @@ var app = (function () {
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[12]);
     			attr_dev(div, "class", "svelte-dvksro");
-    			add_location(div, file, 127, 3, 3677);
+    			add_location(div, file, 128, 3, 3698);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -11188,7 +11188,7 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(127:2) {#each [...Array(16).keys()] as i}",
+    		source: "(128:2) {#each [...Array(16).keys()] as i}",
     		ctx
     	});
 
@@ -11260,25 +11260,25 @@ var app = (function () {
     			t5 = space();
     			create_component(board_1.$$.fragment);
     			attr_dev(div0, "class", "menu svelte-dvksro");
-    			add_location(div0, file, 115, 1, 3428);
+    			add_location(div0, file, 116, 1, 3449);
     			attr_dev(div1, "class", "colors svelte-dvksro");
-    			add_location(div1, file, 125, 1, 3616);
+    			add_location(div1, file, 126, 1, 3637);
     			attr_dev(div2, "id", "editor");
     			attr_dev(div2, "class", "svelte-dvksro");
-    			add_location(div2, file, 134, 3, 3777);
+    			add_location(div2, file, 135, 3, 3798);
     			attr_dev(input, "type", "text");
     			attr_dev(input, "placeholder", "תיאור");
-    			add_location(input, file, 136, 4, 3833);
-    			add_location(button, file, 141, 4, 3923);
+    			add_location(input, file, 137, 4, 3854);
+    			add_location(button, file, 142, 4, 3944);
     			attr_dev(div3, "class", "row margin-top svelte-dvksro");
-    			add_location(div3, file, 135, 3, 3800);
+    			add_location(div3, file, 136, 3, 3821);
     			attr_dev(div4, "class", "col svelte-dvksro");
-    			add_location(div4, file, 133, 2, 3756);
+    			add_location(div4, file, 134, 2, 3777);
     			attr_dev(div5, "class", "edit svelte-dvksro");
-    			add_location(div5, file, 132, 1, 3735);
+    			add_location(div5, file, 133, 1, 3756);
     			attr_dev(main, "dir", "rtl");
     			attr_dev(main, "class", "svelte-dvksro");
-    			add_location(main, file, 114, 0, 3410);
+    			add_location(main, file, 115, 0, 3431);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -11397,7 +11397,7 @@ var app = (function () {
     function instance($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
     	validate_slots('App', slots, []);
-    	const board = Array.from(Array(n), () => new Array(n));
+    	let board = Array.from(Array(n), () => new Array(n));
     	let user;
 
     	async function storeAccessToken(code) {
@@ -11487,6 +11487,7 @@ var app = (function () {
 
     		function exec(code) {
     			board.forEach(row => row.fill(0));
+    			$$invalidate(0, board);
 
     			const host = {
     				vars: {},
@@ -11545,6 +11546,7 @@ var app = (function () {
     	});
 
     	$$self.$inject_state = $$props => {
+    		if ('board' in $$props) $$invalidate(0, board = $$props.board);
     		if ('user' in $$props) $$invalidate(1, user = $$props.user);
     		if ('octokit' in $$props) octokit = $$props.octokit;
     		if ('gists' in $$props) gists = $$props.gists;
