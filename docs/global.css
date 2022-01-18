@@ -9,10 +9,12 @@ body {
     height: 100%;
 }
 
+t[kind='0'],
 t[kind='1'],
 t[kind='2'],
 t[kind='3'],
-t[kind='4'] {
+t[kind='4'],
+t[kind='17'] {
     font-weight: bold;
     color: blue;
 }

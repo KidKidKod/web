@@ -6,7 +6,7 @@
 	import { Octokit } from "octokit";
 
 	const n = 24;
-	const board = Array.from(Array(n), () => new Array(n));
+	let board = Array.from(Array(n), () => new Array(n));
 	let user;
 
 	async function storeAccessToken(code: string) {
@@ -107,6 +107,7 @@
 
 		function exec(code: string) {
 			board.forEach((row) => row.fill(0));
+			board = board;
 			const host = {
 				vars: {},
 				funcs: {
