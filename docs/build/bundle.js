@@ -1990,6 +1990,9 @@ var app = (function () {
         K[K["RP"] = 13] = "RP";
         K[K["WS"] = 14] = "WS";
         K[K["Name"] = 15] = "Name";
+        K[K["Compare"] = 16] = "Compare";
+        K[K["And"] = 17] = "And";
+        K[K["Or"] = 18] = "Or";
     })(K || (K = {}));
     const KW_ENGLISH = {
         If: 'if',
@@ -1997,6 +2000,8 @@ var app = (function () {
         From: 'from',
         To: 'to',
         End: 'end',
+        And: 'and',
+        Or: 'or',
     };
     const KW_HEBREW = {
         If: 'אם',
@@ -2004,6 +2009,8 @@ var app = (function () {
         From: 'מ',
         To: 'עד',
         End: 'סוף',
+        And: 'וגם',
+        Or: 'או',
     };
     function getLexer(keepWs = false, KW = KW_ENGLISH) {
         return lib.buildLexer([
@@ -2014,6 +2021,8 @@ var app = (function () {
             [true, new RegExp(`^${KW.From}`, 'g'), K.From],
             [true, new RegExp(`^${KW.To}`, 'g'), K.To],
             [true, new RegExp(`^${KW.End}`, 'g'), K.End],
+            [true, new RegExp(`^${KW.And}`, 'g'), K.And],
+            [true, new RegExp(`^${KW.Or}`, 'g'), K.Or],
             [true, /^\d+/g, K.Number],
             [true, /^=/g, K.Assign],
             [true, /^[*/%]/g, K.Op1],
@@ -2022,7 +2031,8 @@ var app = (function () {
             [true, /^:/g, K.Col],
             [true, /^\(/g, K.LP],
             [true, /^\)/g, K.RP],
-            [true, /^[a-z_א-ת]+/g, K.Name],
+            [true, /^[<>]/g, K.Compare],
+            [true, /^[a-zא-ת][a-z_א-ת0-9]*/g, K.Name],
         ]);
     }
     const ops = {
@@ -2037,12 +2047,14 @@ var app = (function () {
             return +num.text;
         }
         function expVar(name) {
-            const v = name.text;
-            if (!(v in host.vars)) {
-                host.vars[v] = 0;
-            }
             return {
-                eval: () => host.vars[v]
+                eval: () => {
+                    const v = name.text;
+                    if (!(v in host.vars)) {
+                        host.vars[v] = 0;
+                    }
+                    return host.vars[v];
+                }
             };
         }
         function expNum(num) {
@@ -2056,12 +2068,12 @@ var app = (function () {
             };
         }
         function expFuncCall(value) {
-            const [name, args] = value;
-            if (!(name.text in host.funcs)) {
-                host.funcs[name.text] = (...args) => 0;
-            }
             return {
                 eval: () => {
+                    const [name, args] = value;
+                    if (!(name.text in host.funcs)) {
+                        host.funcs[name.text] = (...args) => 0;
+                    }
                     const vals = args.map(x => x.eval());
                     return host.funcs[name.text](...vals);
                 }
@@ -2075,6 +2087,9 @@ var app = (function () {
         const TERM = lib.rule();
         const FACTOR = lib.rule();
         const EXP = lib.rule();
+        const COMPARE = lib.rule();
+        const AND = lib.rule();
+        const BOOL = lib.rule();
         const FUNC_CALL = lib.rule();
         const ASSIGN = lib.rule();
         const EACH = lib.rule();
@@ -2083,6 +2098,34 @@ var app = (function () {
         const STMT = lib.rule();
         const PROG = lib.rule();
         ARGS.setPattern(lib.alt(lib.apply(lib.seq(lib.tok(K.LP), lib.tok(K.RP)), () => []), lib.kmid(lib.tok(K.LP), lib.lrec_sc(lib.apply(EXP, e => [e]), lib.seq(lib.tok(K.Comma), EXP), args), lib.tok(K.RP))));
+        const compare = {
+            '<': (a, b) => a < b,
+            '>': (a, b) => a > b,
+            '>=': (a, b) => a >= b,
+            '<=': (a, b) => a <= b,
+            '==': (a, b) => a === b,
+        };
+        function expCompare(value) {
+            const [e1, c, e2] = value;
+            return {
+                eval: () => compare[c.text](e1.eval(), e2.eval())
+            };
+        }
+        COMPARE.setPattern(lib.alt(EXP, lib.apply(lib.seq(EXP, lib.tok(K.Compare), EXP), expCompare)));
+        function expAnd(e1, second) {
+            const [_, e2] = second;
+            return {
+                eval: () => e1.eval() && e2.eval()
+            };
+        }
+        AND.setPattern(lib.lrec_sc(COMPARE, lib.seq(lib.tok(K.And), COMPARE), expAnd));
+        function expBool(e1, second) {
+            const [_, e2] = second;
+            return {
+                eval: () => e1.eval() || e2.eval()
+            };
+        }
+        BOOL.setPattern(lib.lrec_sc(AND, lib.seq(lib.tok(K.Or), AND), expBool));
         TERM.setPattern(lib.alt(lib.apply(lib.tok(K.Name), expVar), lib.apply(lib.tok(K.Number), expNum), lib.kmid(lib.tok(K.LP), EXP, lib.tok(K.RP))));
         FACTOR.setPattern(lib.lrec_sc(TERM, lib.seq(lib.tok(K.Op1), TERM), expOp));
         EXP.setPattern(lib.alt(lib.lrec_sc(FACTOR, lib.seq(lib.tok(K.Op2), FACTOR), expOp), FUNC_CALL));
@@ -2112,7 +2155,7 @@ var app = (function () {
                 }
             };
         }
-        IF.setPattern(lib.apply(lib.seq(lib.tok(K.If), EXP, lib.tok(K.Col), PROG, lib.tok(K.End)), expIf));
+        IF.setPattern(lib.apply(lib.seq(lib.tok(K.If), BOOL, lib.tok(K.Col), PROG, lib.tok(K.End)), expIf));
         function expAssign(value) {
             const [name, _, exp] = value;
             return {

@@ -58,10 +58,20 @@ test('Each Loop', () => {
 
 test('If true', () => {
     const host = { vars: {}, funcs: {} };
-    const prog = parse('if 1: a = 7 end', { host })
+    const prog = parse('if 1 + 1 < 3: a = 7 end', { host })
 
     prog.forEach(x => x.eval())
     expect(host.vars).toEqual({ a: 7 })
+})
+
+test('If lazy', () => {
+    let i = 0
+    const host = { vars: {}, funcs: { a: () => i += 1, b: () => i += 2 } };
+    const prog = parse('if a() or b(): c = 7 end', { host })
+
+    prog.forEach(x => x.eval())
+    expect(host.vars).toEqual({ c: 7 })
+    expect(i).toEqual(1)
 })
 
 test('If false', () => {

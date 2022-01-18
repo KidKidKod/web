@@ -19,6 +19,9 @@ export enum K {
     RP,
     WS,
     Name,
+    Compare,
+    And,
+    Or,
 }
 
 interface KW {
@@ -27,6 +30,8 @@ interface KW {
     From: string
     To: string
     End: string
+    And: string
+    Or: string
 }
 
 const KW_ENGLISH = {
@@ -35,6 +40,8 @@ const KW_ENGLISH = {
     From: 'from',
     To: 'to',
     End: 'end',
+    And: 'and',
+    Or: 'or',
 }
 
 export const KW_HEBREW = {
@@ -43,6 +50,8 @@ export const KW_HEBREW = {
     From: 'מ',
     To: 'עד',
     End: 'סוף',
+    And: 'וגם',
+    Or: 'או',
 }
 
 export function getLexer(keepWs = false, KW = KW_ENGLISH) {
@@ -54,6 +63,8 @@ export function getLexer(keepWs = false, KW = KW_ENGLISH) {
         [true, new RegExp(`^${KW.From}`, 'g'), K.From],
         [true, new RegExp(`^${KW.To}`, 'g'), K.To],
         [true, new RegExp(`^${KW.End}`, 'g'), K.End],
+        [true, new RegExp(`^${KW.And}`, 'g'), K.And],
+        [true, new RegExp(`^${KW.Or}`, 'g'), K.Or],
         [true, /^\d+/g, K.Number],
         [true, /^=/g, K.Assign],
         [true, /^[*/%]/g, K.Op1],
@@ -62,7 +73,8 @@ export function getLexer(keepWs = false, KW = KW_ENGLISH) {
         [true, /^:/g, K.Col],
         [true, /^\(/g, K.LP],
         [true, /^\)/g, K.RP],
-        [true, /^[a-z_א-ת]+/g, K.Name],
+        [true, /^[<>]/g, K.Compare],
+        [true, /^[a-zא-ת][a-z_א-ת0-9]*/g, K.Name],
     ])
 }
 
@@ -90,13 +102,14 @@ export function parse(input: string, { lexer = getLexer(), host = { vars: {}, fu
     }
 
     function expVar(name: Token<K.Name>): Exp {
-        const v = name.text
-        if (!(v in host.vars)) {
-            host.vars[v] = 0
-        }
-
         return {
-            eval: () => host.vars[v]
+            eval: () => {
+                const v = name.text
+                if (!(v in host.vars)) {
+                    host.vars[v] = 0
+                }
+                return host.vars[v]
+            }
         };
     }
 
@@ -116,13 +129,13 @@ export function parse(input: string, { lexer = getLexer(), host = { vars: {}, fu
 
 
     function expFuncCall(value: [Token<K.Name>, Exp[]]) {
-        const [name, args] = value;
-        if (!(name.text in host.funcs)) {
-            host.funcs[name.text] = (...args) => 0
-        }
-
         return {
             eval: () => {
+                const [name, args] = value;
+                if (!(name.text in host.funcs)) {
+                    host.funcs[name.text] = (...args) => 0
+                }
+
                 const vals = args.map(x => x.eval())
                 return host.funcs[name.text](...vals);
             }
@@ -138,6 +151,9 @@ export function parse(input: string, { lexer = getLexer(), host = { vars: {}, fu
     const TERM = rule<K, Exp>();
     const FACTOR = rule<K, Exp>();
     const EXP = rule<K, Exp>();
+    const COMPARE = rule<K, Exp>();
+    const AND = rule<K, Exp>();
+    const BOOL = rule<K, Exp>();
     const FUNC_CALL = rule<K, Exp>();
     const ASSIGN = rule<K, Exp>();
     const EACH = rule<K, Exp>();
@@ -166,6 +182,50 @@ export function parse(input: string, { lexer = getLexer(), host = { vars: {}, fu
         )
     )
 
+    const compare = {
+        '<': (a: number, b: number) => a < b,
+        '>': (a: number, b: number) => a > b,
+        '>=': (a: number, b: number) => a >= b,
+        '<=': (a: number, b: number) => a <= b,
+        '==': (a: number, b: number) => a === b,
+    }
+
+    function expCompare(value: [Exp, Token<K.Compare>, Exp]) {
+        const [e1, c, e2] = value
+        return {
+            eval: () => compare[c.text](e1.eval(), e2.eval())
+        }
+    }
+
+    COMPARE.setPattern(
+        alt(
+            EXP,
+            apply(seq(EXP, tok(K.Compare), EXP), expCompare))
+    )
+
+    function expAnd(e1: Exp, second: [Token<K.And>, Exp]) {
+        const [_, e2] = second
+        return {
+            eval: () => e1.eval() && e2.eval()
+        }
+    }
+
+    AND.setPattern(
+        lrec_sc(COMPARE, seq(tok(K.And), COMPARE), expAnd)
+    )
+
+
+    function expBool(e1: Exp, second: [Token<K.Or>, Exp]) {
+        const [_, e2] = second
+        return {
+            eval: () => e1.eval() || e2.eval()
+        }
+    }
+
+    BOOL.setPattern(
+        lrec_sc(AND, seq(tok(K.Or), AND), expBool),
+    )
+
     TERM.setPattern(
         alt(
             apply(tok(K.Name), expVar),
@@ -181,7 +241,7 @@ export function parse(input: string, { lexer = getLexer(), host = { vars: {}, fu
     EXP.setPattern(
         alt(
             lrec_sc(FACTOR, seq(tok(K.Op2), FACTOR), expOp),
-            FUNC_CALL
+            FUNC_CALL,
         )
     )
 
@@ -250,7 +310,7 @@ export function parse(input: string, { lexer = getLexer(), host = { vars: {}, fu
         apply(
             seq(
                 tok(K.If),
-                EXP,
+                BOOL,
                 tok(K.Col),
                 PROG,
                 tok(K.End),
