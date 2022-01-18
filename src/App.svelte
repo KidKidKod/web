@@ -4,21 +4,32 @@
 	import { CodeJar } from "codejar";
 	import Board from "./Board.svelte";
 	import { getLexer, K, KW_HEBREW, parse } from "./parser";
-	import { getUser, login } from "./github";
+	import { getUser, loadGist, login } from "./github";
 	import * as showdown from "showdown";
 
-	const tutorials = ["b28898ea969349781ff75853716d0978"];
+	const n = 16;
+	const tutorial = "b28898ea969349781ff75853716d0978";
 	const mdConverter = new showdown.Converter();
-	const n = 24;
+	const yay = new Audio("yay.mp3");
 
+	let target = Array.from(Array(n), () => new Array(n));
 	let board = Array.from(Array(n), () => new Array(n));
 	let octokit: Octokit;
 	let user: string;
 	let description: string;
+	let solution: string;
+	let status = "😒";
 
 	async function init() {
 		octokit = await login();
 		user = await getUser(octokit);
+		const {
+			data: { files },
+		} = await loadGist(octokit, tutorial);
+		description = mdConverter.makeHtml(files["kidkidkod.md"].content);
+		solution = files["kidkidkod.app"].content;
+		console.log(solution);
+		target = exec(target)(solution);
 	}
 
 	init();
@@ -38,31 +49,39 @@
 
 	function sleep(ms: number) {}
 
-	function color(i: number, j: number, v: number) {
+	const color = (board: number[][]) => (i: number, j: number, v: number) => {
 		if (0 <= i && i < n && 0 <= j && j < n) {
 			board[i][j] = v;
 		}
 		return 0;
-	}
+	};
 
-	function exec(code: string) {
+	const exec = (board: number[][]) => (code: string) => {
 		board.forEach((row) => row.fill(0));
-		board = board;
+
 		const host = {
 			vars: {},
 			funcs: {
-				sleep,
-				color,
-				צבע: color,
+				צבע: color(board),
 				נמנם: sleep,
 			},
 		};
+
 		const prog = parse(code, {
 			host,
 			lexer: getLexer(false, KW_HEBREW),
 		});
 
 		prog.forEach((s) => s.eval());
+		return board;
+	};
+
+	function updateBoard(code: string) {
+		board = exec(board)(code);
+		if (JSON.stringify(board) === JSON.stringify(target)) {
+			status = "😍";
+			yay.play();
+		}
 	}
 
 	const highlight = (editor: HTMLElement) => {
@@ -82,12 +101,13 @@
 			indentOn: /.*:$/,
 		});
 
-		jar.onUpdate(exec);
+		jar.onUpdate(updateBoard);
 	});
 </script>
 
 <main dir="rtl">
 	<div class="menu">
+		<div class="status">{status}</div>
 		{#if user}
 			{user}
 		{:else}
@@ -97,12 +117,13 @@
 			>
 		{/if}
 	</div>
-	<div class="description">
+	<div class="row">
 		<div
 			id="description"
 			bind:innerHTML={description}
 			contenteditable="false"
 		/>
+		<Board board={target} />
 	</div>
 	<div class="colors">
 		{#each [...Array(16).keys()] as i}
@@ -111,7 +132,7 @@
 			</div>
 		{/each}
 	</div>
-	<div class="edit">
+	<div class="row">
 		<div id="editor" />
 		<Board {board} />
 	</div>
@@ -129,9 +150,13 @@
 		display: flex;
 		flex-direction: row;
 		margin-bottom: 1em;
-		background-color: #333;
-		color: white;
 		padding: 0.5em;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.status {
+		font-size: 2em;
 	}
 
 	a {
@@ -144,15 +169,18 @@
 		color: #dfd;
 	}
 
-	.edit {
+	.row {
 		display: flex;
 		flex-direction: row;
+	}
+
+	#description {
+		flex-grow: 1;
 	}
 
 	#editor {
 		flex-grow: 1;
 		border: 1px solid #ccc;
-		font-size: 16px;
 		font-family: Consolas, monospace;
 		line-height: 1.5;
 		padding: 0.5em;
@@ -161,7 +189,8 @@
 	}
 
 	.colors {
-		margin-bottom: 1em;
+		margin: 1em 0;
+		border: 1px solid #ddd;
 		display: flex;
 		flex-direction: row;
 		justify-content: space-between;

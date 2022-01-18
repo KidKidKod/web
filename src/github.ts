@@ -12,16 +12,15 @@ async function getAccessToken(code: string) {
 }
 
 function rmQueryParam(key: string) {
-    const path =
-        location.pathname +
-        location.search
-            .replace(new RegExp(`\b${key}=\w+`, 'g'), "")
-            .replace(/[?&]+$/, "");
-    history.pushState({}, "", path);
+    const params = new URLSearchParams(location.search)
+    params.delete(key)
+    const url = `${location.pathname}?${params.toString()}`
+    console.log(url)
+    history.pushState({}, "", url)
 }
 
 function getParams() {
-    return Object.fromEntries(new URLSearchParams(window.location.search).entries());
+    return Object.fromEntries(new URLSearchParams(location.search).entries());
 }
 
 export async function login() {
@@ -41,11 +40,24 @@ export async function login() {
     return new Octokit({ auth: access_token });
 }
 
-export async function getUser(octokit: Octokit) {
+export async function getUser(octokit: Octokit | undefined) {
+    if (!octokit) {
+        return
+    }
+
     const {
         data: { name },
     } = await octokit.request("GET /user");
+
     return name
+}
+
+export function loadGist(octokit: Octokit | undefined, gistId: string) {
+    if (!octokit) {
+        return
+    }
+
+    return octokit.request("GET /gists/" + gistId);
 }
 
 // async function save() {
