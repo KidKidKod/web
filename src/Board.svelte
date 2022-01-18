@@ -3,8 +3,15 @@
 </script>
 
 <div class="board">
+    <div class="row">
+        <div class="num" />
+        {#each board[0] as _, i}
+            <div class="num">{i}</div>
+        {/each}
+    </div>
     {#each board as row, i}
         <div class="row">
+            <div class="num">{i}</div>
             {#each row as color}
                 <div class="cell" data-color={color} />
             {/each}
@@ -12,6 +19,7 @@
         </div>
     {/each}
     <div class="row">
+        <div class="num" />
         {#each board[0] as _, i}
             <div class="num">{i}</div>
         {/each}

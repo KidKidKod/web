@@ -8,9 +8,15 @@
 	import * as showdown from "showdown";
 
 	const n = 16;
-	const tutorial = "b28898ea969349781ff75853716d0978";
+	const tutorials = [
+		"b28898ea969349781ff75853716d0978",
+		"c524426ed5199944e9cbc1b938f6cf31",
+	];
 	const mdConverter = new showdown.Converter();
 	const yay = new Audio("yay.mp3");
+
+	let level = +localStorage.getItem("level") || 0;
+	$: tutorial = tutorials[level];
 
 	let target = Array.from(Array(n), () => new Array(n));
 	let board = Array.from(Array(n), () => new Array(n));
@@ -18,11 +24,9 @@
 	let user: string;
 	let description: string;
 	let solution: string;
-	let status = "😒";
+	$: status = JSON.stringify(target) === JSON.stringify(board) ? "😍" : "😒";
 
-	async function init() {
-		octokit = await login();
-		user = await getUser(octokit);
+	async function updateGist() {
 		const {
 			data: { files },
 		} = await loadGist(octokit, tutorial);
@@ -30,6 +34,12 @@
 		solution = files["kidkidkod.app"].content;
 		console.log(solution);
 		target = exec(target)(solution);
+	}
+
+	async function init() {
+		octokit = await login();
+		user = await getUser(octokit);
+		updateGist();
 	}
 
 	init();
@@ -79,8 +89,10 @@
 	function updateBoard(code: string) {
 		board = exec(board)(code);
 		if (JSON.stringify(board) === JSON.stringify(target)) {
-			status = "😍";
 			yay.play();
+			level += 1;
+			localStorage.setItem("level", level.toString());
+			updateGist();
 		}
 	}
 
