@@ -9,6 +9,10 @@ body {
     height: 100%;
 }
 
+code {
+    direction: rtl;
+}
+
 t[kind='0'],
 t[kind='1'],
 t[kind='2'],

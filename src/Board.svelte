@@ -32,7 +32,7 @@
     .cell {
         width: 1.3em;
         height: 1.3em;
-        border: 1px solid gray;
+        border: 1px solid #ddd;
         margin-left: 0.2em;
     }
 
@@ -40,7 +40,7 @@
         margin-left: 0.2em;
         width: 1.3em;
         height: 1.3em;
-        color: #333;
+        color: #666;
         display: flex;
         justify-content: center;
         align-items: center;
