@@ -73,7 +73,7 @@ export function getLexer(keepWs = false, KW = KW_ENGLISH) {
         [true, /^:/g, K.Col],
         [true, /^\(/g, K.LP],
         [true, /^\)/g, K.RP],
-        [true, /^[<>]/g, K.Compare],
+        [true, /^[<>]|<=|>=|==/g, K.Compare],
         [true, /^[a-zא-ת][a-z_א-ת0-9]*/g, K.Name],
     ])
 }
