@@ -28,8 +28,10 @@
     "typescript": "^4.0.0"
   },
   "dependencies": {
+    "@types/showdown": "^1.9.4",
     "codejar": "^3.5.0",
     "octokit": "^1.7.1",
+    "showdown": "^1.9.0",
     "sirv-cli": "^2.0.0",
     "typescript-parsec": "^0.3.2"
   }
