@@ -2024,6 +2024,10 @@ var app = (function () {
             [true, new RegExp(`^${KW.And}`, 'g'), K.And],
             [true, new RegExp(`^${KW.Or}`, 'g'), K.Or],
             [true, /^\d+/g, K.Number],
+            [true, /^[<>]/g, K.Compare],
+            [true, /^==/g, K.Compare],
+            [true, /^>=/g, K.Compare],
+            [true, /^<=/g, K.Compare],
             [true, /^=/g, K.Assign],
             [true, /^[*/%]/g, K.Op1],
             [true, /^[-+]/g, K.Op2],
@@ -2031,7 +2035,6 @@ var app = (function () {
             [true, /^:/g, K.Col],
             [true, /^\(/g, K.LP],
             [true, /^\)/g, K.RP],
-            [true, /^[<>]/g, K.Compare],
             [true, /^[a-zא-ת][a-z_א-ת0-9]*/g, K.Name],
         ]);
     }
