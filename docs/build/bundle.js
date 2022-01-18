@@ -16219,7 +16219,7 @@ var app = (function () {
     			a = element("a");
     			a.textContent = "התחבר";
     			attr_dev(a, "href", "https://github.com/login/oauth/authorize?scope:gist&client_id=b22b1c742cd6f94f2a1e");
-    			attr_dev(a, "class", "svelte-1hermjw");
+    			attr_dev(a, "class", "svelte-jvj935");
     			add_location(a, file, 93, 3, 2542);
     		},
     		m: function mount(target, anchor) {
@@ -16285,7 +16285,7 @@ var app = (function () {
     			t0 = text(t0_value);
     			t1 = space();
     			attr_dev(div, "data-color", /*i*/ ctx[17]);
-    			attr_dev(div, "class", "svelte-1hermjw");
+    			attr_dev(div, "class", "svelte-jvj935");
     			add_location(div, file, 109, 3, 2881);
     		},
     		m: function mount(target, anchor) {
@@ -16383,26 +16383,26 @@ var app = (function () {
     			div5 = element("div");
     			t6 = space();
     			create_component(board1.$$.fragment);
-    			attr_dev(div0, "class", "status svelte-1hermjw");
+    			attr_dev(div0, "class", "status svelte-jvj935");
     			add_location(div0, file, 89, 2, 2471);
-    			attr_dev(div1, "class", "menu svelte-1hermjw");
+    			attr_dev(div1, "class", "menu svelte-jvj935");
     			add_location(div1, file, 88, 1, 2450);
     			attr_dev(div2, "id", "description");
     			attr_dev(div2, "contenteditable", "false");
-    			attr_dev(div2, "class", "svelte-1hermjw");
+    			attr_dev(div2, "class", "svelte-jvj935");
     			if (/*description*/ ctx[3] === void 0) add_render_callback(() => /*div2_input_handler*/ ctx[5].call(div2));
     			add_location(div2, file, 100, 2, 2695);
-    			attr_dev(div3, "class", "row svelte-1hermjw");
+    			attr_dev(div3, "class", "row svelte-jvj935");
     			add_location(div3, file, 99, 1, 2675);
-    			attr_dev(div4, "class", "colors svelte-1hermjw");
+    			attr_dev(div4, "class", "colors svelte-jvj935");
     			add_location(div4, file, 107, 1, 2820);
     			attr_dev(div5, "id", "editor");
-    			attr_dev(div5, "class", "svelte-1hermjw");
+    			attr_dev(div5, "class", "svelte-jvj935");
     			add_location(div5, file, 115, 2, 2959);
-    			attr_dev(div6, "class", "row svelte-1hermjw");
+    			attr_dev(div6, "class", "row svelte-jvj935");
     			add_location(div6, file, 114, 1, 2939);
     			attr_dev(main, "dir", "rtl");
-    			attr_dev(main, "class", "svelte-1hermjw");
+    			attr_dev(main, "class", "svelte-jvj935");
     			add_location(main, file, 87, 0, 2432);
     		},
     		l: function claim(nodes) {
